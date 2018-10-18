@@ -21,7 +21,7 @@ class MyListener(StreamListener):
     def on_data(self,data):
         n=1
         try:
-            with open('/Users/yibingyang/Documents/final_thesis/Weed/weed_kw.json','a')as f:
+            with open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/weed_kw.json','a')as f:
                 print()
                 f.write(data)
                 n+=1

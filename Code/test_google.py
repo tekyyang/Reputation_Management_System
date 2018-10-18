@@ -17,7 +17,7 @@
 # a_test().main()
 
 import re
-# from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup
 #
 # text = '''
 # <h3 class="r">
@@ -62,9 +62,9 @@ import re
 # print result
 # drizzy
 #
-# import requests
-# from bs4 import BeautifulSoup
-# import re
+import requests
+from bs4 import BeautifulSoup
+import re
 #
 # url = 'https://www.capebretonpost.com/business/shopify-opens-first-brick-and-mortar-spot-with-goal-of-helping-entrepreneurs-249100/'
 # r = requests.get(url)
@@ -78,7 +78,32 @@ import re
 # import datetime
 # print str(datetime.datetime.now())[:10].replace('-','_')
 
-import requests
-url = 'https://www.google.ca/search?q=canada+weed&newwindow=1&rlz=1C5CHFA_enCA796CA796&tbs=qdr:d&tbm=nws&ei=mJG_W7jQO6PH_Qak_5T4BA&start=0&sa=N&biw=898&bih=1257&dpr=1'
-response = str(requests.get(url))
-print response
+# import requests
+# url = 'https://www.google.ca/search?q=shopify&newwindow=1&rlz=1C5CHFA_enCA796CA796&tbs=qdr:d&tbm=nws&ei=mJG_W7jQO6PH_Qak_5T4BA&start=0&sa=N&biw=898&bih=1257&dpr=1'
+# response = requests.get(url)
+# html = response.text
+# soup = BeautifulSoup(html, "html.parser")
+# print soup.prettify()
+# link = 'https://www.google.ca/search?q=legalization+day+canada&newwindow=1&rlz=1C5CHFA_enCA796CA796&tbs=qdr:d&tbm=nws&ei=mJG_W7jQO6PH_Qak_5T4BA&start=0&sa=N&biw=898&bih=1257&dpr=1'
+# r = requests.get(link)
+# html = r.text
+#
+#
+# test = '''
+# <h3 class="r dO0Ag"><a class="l lLrAF" href="https://www.cbc.ca/news/canada/british-columbia/anti-pot-legalization-1.4867712" onmousedown="return rwt(this,'','','','1','AOvVaw0509qRPhPaN6cdWsCESZJJ','','0ahUKEwjrpI2355DeAhVrs1QKHYArBZYQqQIIJigAMAA','','',event)" target="_blank">A 'dark <em>day</em> for <em>Canada</em>,' say anti-pot activists</a></h3>
+# <h3 class="r dO0Ag"><a class="l lLrAF" href="https://www.cbc.ca/news/canada/british-columbia/anti-pot-legalization-1.4867712" onmousedown="return rwt(this,'','','','1','AOvVaw0509qRPhPaN6cdWsCESZJJ','','0ahUKEwjrpI2355DeAhVrs1QKHYArBZYQqQIIJigAMAA','','',event)" target="_blank">A 'dark <em>day</em> for <em>Canada</em>,' say anti-pot activists</a></h3>
+# '''
+# soup = BeautifulSoup(test, "html.parser")
+# raw_links = soup.find_all('h3', attrs={'class': 'r'})
+# for i in raw_links:
+#     print i.find('a').get('href')
+# raw_links = [re.search(r'(http.+?)&sa', i.find('a').get('href')).group(1) for i in soup.find_all('h3', attrs={'class': 'r'})]
+# print raw_links
+# print re.search(r'(http.+?)&sa' ,string).group(1)
+#
+# dic = {'a':1}
+# print len(dic)
+
+
+cd_max='10/18/2018'
+print str.split(cd_max,'/')
