@@ -16,8 +16,7 @@
 #
 # a_test().main()
 
-import re
-from bs4 import BeautifulSoup
+
 #
 # text = '''
 # <h3 class="r">
@@ -105,5 +104,111 @@ import re
 # print len(dic)
 
 
-cd_max='10/18/2018'
-print str.split(cd_max,'/')
+# cd_max='10/18/2018'
+# print str.split(cd_max,'/')
+
+#
+# import re
+# from bs4 import BeautifulSoup
+# import urllib2
+#
+# link = 'https://www.furniture.ca/collections/furniture-living-room-sofas'
+# r = urllib2.urlopen(link)
+# html = r.read()
+# soup = BeautifulSoup(html, "html.parser")
+# print soup.prettify()
+#
+#
+# for i in range(1,10):
+#     locals()['cursor' + '_' + str(i+1)]=i+1
+# print cursor_2
+#
+# import pandas as pd
+# url = '/Users/yibingyang/Documents/5900X/ios_pr_test.json'
+# df = pd.read_json(url,orient = 'records', lines = True)
+
+#
+# dict_test =\
+# {'reviews':
+# [
+#                     {
+#                       "author": {
+#                         "login": "p-sun"
+#                       },
+#                       "bodyText": "",
+#                       "comments": {
+#                         "nodes": [
+#                           {
+#                             "bodyText": "Added this method that only returns true to make sure that the dev implementing will override canBecomeFirstResponder",
+#                             "reactions": {
+#                               "viewerHasReacted": False,
+#                               "nodes": []
+#                             }
+#                           }
+#                         ]
+#                       },
+#                       "createdAt": "2017-05-17T14:24:18Z",
+#                       "state": "COMMENTED"
+#                     },
+#
+#
+#                     {
+#                       "author": {
+#                         "login": "Caiopia"
+#                       },
+#                       "bodyText": "",
+#                       "comments": {
+#                         "nodes": [
+#                           {
+#                             "bodyText": "One thing we should think about is that implementers of Copyable here might forget to override these functions and call the each of the overrideCopy(), overrideCanPerformAction(action) and overridecanBecomeFirstResponder()` functions inside them.\nWhile it's pretty simple for us to copy/paste since we know about it and can look at other implementations, I'm thinking it might be less straightforward for someone first seeing the Copyable protocol.",
+#                             "reactions": {
+#                               "viewerHasReacted": False,
+#                               "nodes": []
+#                             }
+#                           }
+#                         ]
+#                       },
+#                       "createdAt": "2017-05-18T03:43:42Z",
+#                       "state": "COMMENTED"
+#                     },
+#
+#
+#
+#                     {
+#                       "author": {
+#                         "login": "krbarnes"
+#                       },
+#                       "bodyText": "Lets have a discussion IRL. Trying to parse/discuss competing proposals in different PRs isn't a productive way to discuss this issue  #167 and #169",
+#                       "comments": {
+#                         "nodes": []
+#                       },
+#                       "createdAt": "2017-05-18T13:32:43Z",
+#                       "state": "CHANGES_REQUESTED"
+#                     }
+#                   ]
+# }
+#
+#
+# for i in dict_test['reviews']:
+#   for j in i['comments']['nodes']:
+#     print j['bodyText']
+
+# import pprint
+# dict = \
+#   {"shop_id": "8960700", "pod_id": "28", "shard_id": "28", "edge_location": "chi2", "request_served_from": "chi2",
+#    "event_at": "2017-09-26T17:30:00Z", "processing_time_seconds_sum": "0 0 0 0 0 0 0 0 168 150 ",
+#    "app_server_processing_time_seconds_sum": "NULL", "request_count": "119", "app_server_request_count": "119",
+#    "load_balancer_request_count": "0", "_fact_key": "SRBjgtxXIeuZdextmv5Q5", "_audit_key": "71092818245607370846"}
+# pprint.pprint(dict)
+
+
+# text = 'iphone'
+# print unicode(text)
+
+# test_str = "i won't do that, he won't do that too"
+# print test_str.replace("won't","will not")
+
+# print len('\u2026')
+
+a = [0]*5
+print a

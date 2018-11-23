@@ -1,0 +1,26 @@
+search_tweets_30_day:
+  account_type: premium
+  endpoint: https://api.twitter.com/1.1/tweets/search/30day/dev.json
+  bearer_token: 'AAAAAAAAAAAAAAAAAAAAAMk82QAAAAAAOBzeI7K05TV9b2XKJ%2FDt0UyGLkI%3D4Z9Cd9fPuDr6MtB25gdNj63kwCdXYYRctFBXl0DYVJm78JtDrb'
+
+
+#search_tweets_api:
+#  account_type: premium
+#  endpoint: historical
+#  consumer_key: S5Xu1dAbaWzpVXESPVzS1o5wl
+#  consumer_secret: 3226613022-77lbqgNmmCt626HEh2WvykRbWQTLSJ6wQVxl7Ez
+
+#https://developer.twitter.com/en/docs/metrics/get-tweet-engagement/guides/selecting-engagement-endpoint.html
+
+
+#S5Xu1dAbaWzpVXESPVzS1o5wl
+#xs2U9hnXuWDOpctU7fXHklTwVSPb5lZHfrNN2pIQleybEThh9I
+#
+#3226613022-77lbqgNmmCt626HEh2WvykRbWQTLSJ6wQVxl7Ez
+#96OTDjj8bFxnSNXHHiVX9ODr1uxF1noDCbtEPbVJlfDcl
+
+#
+#consumer_key = 'PtnaBvuJxCsltqFjSGkGBC1lN'
+#consumer_secret = '6H7uDkccYIi5EbhCU5YBaTFSF3lgm682eeoWyUT5erSdvCJktX'
+#access_token = '3226613022-CNZsjaXuaVUSpdjE5lGPm68s031XlreiosX0vIl'
+#access_secret = '7ivtcI5itWV9qMMjYFpiwrJDDX0ZfMNZrv6HP8Q0X8lez'
