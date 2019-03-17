@@ -70,7 +70,7 @@ class MyListener(StreamListener):
 
         import json
         json = json.dumps(tweet_dict) + '\n'
-        f = open('/Users/yibingyang/Documents/final_thesis_project/Data/negative_test.json',"a+")
+        f = open('/Users/yibingyang/Documents/final_thesis_project/Data/negative_test_bf.json',"a+")
         f.write(json)
         f.close()
 
