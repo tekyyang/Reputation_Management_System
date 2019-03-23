@@ -1,0 +1,77 @@
+This is a document recording the workflow in this folder.
+
+1) Data acquisition
+    Tweets with positive and negative emoji would be crawled separately via Twitter standard API.
+
+    The working python files are:
+    0_twitter_api_neg.py
+    0_twitter_api_pos.py
+
+    Output saved path:
+    /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/positive_test.json
+    /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/negative_test.json
+
+    Generally the size of positive file is bigger than the negative file.
+
+
+2) Data preprocessing
+    Running preprocessing on the Tweets we get from the previous step.
+
+    The working python files are:
+    2.1) 1_preprocessing_training_data.py
+
+        Input saved path:
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/raw_data/positive_test.json
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/raw_data/negative_test.json
+
+        Output saved path:
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/after_preprocessing/positive_clean_tweets.txt
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/after_preprocessing/negative_clean_tweets.txt
+
+
+    2.2) 1_preprocessing_test_data.py
+
+        Input saved path:
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/SemEval2017-task4-test-dataset.txt
+
+        Output saved path:
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/positive_test_tweets.txt
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/negative_test_tweets.txt
+
+
+3) Topic modelling
+    build a topic model based on the preprocessed data we get from the previous step:
+    The working python files is:
+
+    2_topic_model_test.py
+
+        Input saved path:
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/after_preprocessing/positive_clean_tweets.txt
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/after_preprocessing/negative_clean_tweets.txt
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/positive_test_tweets.txt
+        /Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/negative_test_tweets.txt
+
+        Output saved path:
+            pass
+
+
+
+The summary of the functions in the class:
+
+topic_model_main.py
+
+- data_resampling
+    input: posi_training_data_df, nega_training_data_df
+    output: training_posi_resampled_token_list, training_nega_resampled_token_list
+
+- bigram_extactor
+    input: training_posi_resampled_token_list, training_nega_resampled_token_list
+    output: posi_bigram_training_token_list, nega_bigram_training_token_list
+
+- feature_selection
+    input: posi_training_token_list, nega_training_token_list
+    output: X_chi_matrix,feature_name_list_after_chi
+
+- fit_matrix_after_feature_selection
+    input: X_chi_matrix
+    output: list_of_list_of_tuple
