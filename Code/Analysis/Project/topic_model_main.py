@@ -349,6 +349,10 @@ class topic_model_builder():
     def evaluate_bar_graph(self, coherences, indices):
         """
         Function to plot bar graph to evaluate all the topic models we get.
+<<<<<<< HEAD
+=======
+
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
         coherences: list of coherence values
         indices: Indices to be used to mark bars. Length of this and coherences should be equal.
         """
@@ -591,4 +595,9 @@ potential improvements:
 1) add a baseline for comparison before running topic model
 2) evaluate the performance for each classifer to see if there is anything we can improve based on the topic model
 3) test something new based on the topic models
+<<<<<<< HEAD
 '''
+=======
+'''
+
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324

@@ -1,5 +1,6 @@
 import Preprocessing
 
+<<<<<<< HEAD
 def read_and_cleaning(folder_path,filename):
     url = folder_path + filename
     with open(url, 'r') as f:
@@ -19,6 +20,27 @@ iphone_list = read_and_cleaning(path, iphone_file)
 for i in iphone_list:
     print i + '\n'
     print '------------------------'
+=======
+# def read_and_cleaning(folder_path,filename):
+#     url = folder_path + filename
+#     with open(url, 'r') as f:
+#         lines = f.readlines()  # read all the lines in the file
+#         tweets = [json.loads(line) for line in lines]  # load them as Python dict
+#         tweets_list = [tweet['text'] for tweet in tweets]
+#         return tweets_list
+#
+#
+# path = '/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/'
+# iphone_file = 'iphone_stream_testdata_collection.json'
+# BeAVoter_file = 'BeAVoter.json'
+# MidtermElections_file = 'MidtermElections2018.json'
+#
+# iphone_list = read_and_cleaning(path, iphone_file)
+#
+# for i in iphone_list:
+#     print i + '\n'
+#     print '------------------------'
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
 
 
 
@@ -67,4 +89,11 @@ with open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_da
 
 with open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/negative_test_tweets.txt', 'w') as f:
     for item in nega_tweets:
+<<<<<<< HEAD
         f.write("%s\n" % item)
+=======
+        f.write("%s\n" % item)
+
+
+
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324

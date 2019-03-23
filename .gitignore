@@ -1,6 +1,7 @@
 # Don't track content of these folders
 Weed/
 Data/
+Initial_Test/
 
 # Don't track content of the following files:
 test.py

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
 from gensim.corpora import Dictionary
 from gensim.models import LdaModel
 from gensim.models import LsiModel
@@ -307,7 +311,11 @@ from nltk import bigrams
 # print "b:", bar.b
 # print "frazzle:", bar.frazzle
 
+<<<<<<< HEAD
 #
+=======
+# 
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
 # date_horizon_list = [{'daily': [7, 30, 90, 180, 360, 720]}, {'30_days_aggr': [30, 60, 90, 120, 180, 240, 360, 720]},
 #                      {'90_days_aggr': [90, 180, 270, 360, 450, 540, 630, 720]}]
 # print date_horizon_list[0].values()

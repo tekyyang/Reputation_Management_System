@@ -34,6 +34,10 @@ class label_tweets():
            the number in nega list to -1 if the number <= -1. After that we have 2 list [1,0,1,1,1,0,1] and [-1,0,0,0,0,-1,0]. We
            want to add them up and only keep the ones not equal to 0 to discard all the tweets with both posi and nega emojis.
         3) In function take_only_the_pos_neg_tweets_and_labels, we only pick up the tweets with non-zero number.
+<<<<<<< HEAD
+=======
+
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
         :param folder_path (String): the path of the folder store the posi and nega raw data acquired from Twitter API
         :param posi_filename (String): the exact filename for posi tweets dataset
         :param nega_filename (String): same as above for nega tweets dataset
@@ -130,8 +134,15 @@ class preprocessing():
     def __init__(self,after_labelled_text_list):
         '''
         #---Preprocessing---#
+<<<<<<< HEAD
         ['That same old man is actually sitting a few 167018 @hyojinis Okey baby :) @BTS_twt #cool',
         ['Let's put an end to all the confusion. Find...']
+=======
+
+        ['That same old man is actually sitting a few 167018 @hyojinis Okey baby :) @BTS_twt #cool',
+        ['Let's put an end to all the confusion. Find...']
+
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
         Remove Retweets ---skip cus this dataset has no retweets
         Drop duplicated tweets -- done previously
         Lowercase all the content -- done in f
@@ -142,6 +153,10 @@ class preprocessing():
         happpppppy will be replaced with happy (check if it is doable) --- done in f
         Stemming to deal with Typos and abbreviations and reduce the sparsity of the features.
         Stop words removal # Drop the 'RT' at the beginning
+<<<<<<< HEAD
+=======
+
+>>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
         :param after_labelled_text_list: The posi or nega text list beging processed after label_tweets
         '''
         self.text_list = after_labelled_text_list
