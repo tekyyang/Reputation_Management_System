@@ -2,6 +2,9 @@
 # ignore env
 venv/
 
+# ignore tokens
+access_tokens.py
+
 
 
 .DS_Store
