@@ -1,4 +1,4 @@
-import Preprocessing
+from preprocessing_training_data import preprocessing
 import json
 
 
@@ -73,8 +73,8 @@ def get_only_posi_nega_tweets_and_lables(tweets, labels):
 
 
 posi_tweets, nega_tweets = get_only_posi_nega_tweets_and_lables(tweets, labels)
-posi_tweets = Preprocessing.processing_pipeline(posi_tweets)
-nega_tweets = Preprocessing.processing_pipeline(nega_tweets)
+posi_tweets = preprocessing.processing_pipeline(posi_tweets)
+nega_tweets = preprocessing.processing_pipeline(nega_tweets)
 
 print posi_tweets[:10]
 print nega_tweets[:10]
