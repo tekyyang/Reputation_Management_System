@@ -75,9 +75,55 @@ topic_model_main.py
 - fit_matrix_after_feature_selection
     input: X_chi_matrix
     output: list_of_list_of_tuple
-<<<<<<< HEAD
-=======
 
 
 
->>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
+
+
+
+vectorizer = TfidfVectorizer()
+X_matrix = vectorizer.fit_transform(X_train_df['text'])
+
+        Parameters
+        ----------
+        raw_documents : iterable
+            an iterable which yields either str, unicode or file objects
+
+        Returns
+        -------
+        X : sparse matrix, [n_samples, n_features]
+            Tf-idf-weighted document-term matrix.
+
+
+
+ch2 = SelectKBest(chi2, k=top_n_feature)
+X_chi_matrix = ch2.fit_transform(X_matrix.toarray(), np.asarray(Y_train_list))
+
+        Parameters
+        ----------
+        X : numpy array of shape [n_samples, n_features]
+            Training set.
+
+        y : numpy array of shape [n_samples]
+            Target values.
+
+        Returns
+        -------
+        X_new : numpy array of shape [n_samples, n_features_new]
+            Transformed array.
+
+
+
+lda = LdaModel(corpus=corpus, num_topics=num_topics, id2word=dictionary)
+
+            Parameters
+            ----------
+            corpus : {iterable of list of (int, float), scipy.sparse.csc}, optional
+            Stream of document vectors or sparse matrix of shape (`num_terms`, `num_documents`).
+            If not given, the model is left untrained (presumably because you want to call
+            :meth:`~gensim.models.ldamodel.LdaModel.update` manually).
+
+            id2word : {dict of (int, str), :class:`gensim.corpora.dictionary.Dictionary`}
+            Mapping from word IDs to words. It is used to determine the vocabulary size, as well as for
+            debugging and topic printing.
+

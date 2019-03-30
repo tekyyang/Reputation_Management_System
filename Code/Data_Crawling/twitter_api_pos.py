@@ -5,17 +5,16 @@ __author__ = 'yyb'
 #https://stackoverflow.com/questions/37943800/stream-tweets-using-tweepy-python-using-emoji?rq=1 (helpful!)
 
 
-import tweepy
 from tweepy import OAuthHandler
 from tweepy import Stream
 from tweepy.streaming import StreamListener
-import datetime
 import pprint
+from access_tokens import consumer_key, consumer_secret, access_token, access_secret
 
-consumer_key = 'S5Xu1dAbaWzpVXESPVzS1o5wl'
-consumer_secret = 'xs2U9hnXuWDOpctU7fXHklTwVSPb5lZHfrNN2pIQleybEThh9I'
-access_token = '3226613022-77lbqgNmmCt626HEh2WvykRbWQTLSJ6wQVxl7Ez'
-access_secret = '96OTDjj8bFxnSNXHHiVX9ODr1uxF1noDCbtEPbVJlfDcl'
+consumer_key = consumer_key
+consumer_secret = consumer_secret
+access_token = access_token
+access_secret = access_secret
 
 auth=OAuthHandler(consumer_key,consumer_secret)
 auth.set_access_token(access_token,access_secret)
