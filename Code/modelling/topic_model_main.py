@@ -18,7 +18,6 @@ import time
 from matplotlib import pyplot as plt
 import itertools
 
-
 class topic_model_builder():
 
     def __init__(self, training_dataset_paths, test_dataset_path):
@@ -777,6 +776,7 @@ potential improvements:
 
 - test something new based on the topic models
 - add part-of-speech analysis in the dataset part
+- something
 '''
 
 
