@@ -5,24 +5,22 @@ __author__ = 'yyb'
 #https://stackoverflow.com/questions/37943800/stream-tweets-using-tweepy-python-using-emoji?rq=1 (helpful!)
 
 
-import tweepy
 from tweepy import OAuthHandler
 from tweepy import Stream
 from tweepy.streaming import StreamListener
-import datetime
 import pprint
+from Project.Code.Analysis.access_tokens import consumer_key, consumer_secret, access_token, access_secret
 
-consumer_key = 'S5Xu1dAbaWzpVXESPVzS1o5wl'
-consumer_secret = 'xs2U9hnXuWDOpctU7fXHklTwVSPb5lZHfrNN2pIQleybEThh9I'
-access_token = '3226613022-77lbqgNmmCt626HEh2WvykRbWQTLSJ6wQVxl7Ez'
-access_secret = '96OTDjj8bFxnSNXHHiVX9ODr1uxF1noDCbtEPbVJlfDcl'
+consumer_key = consumer_key
+consumer_secret = consumer_secret
+access_token = access_token
+access_secret = access_secret
 
 auth=OAuthHandler(consumer_key,consumer_secret)
 auth.set_access_token(access_token,access_secret)
 pp = pprint.PrettyPrinter(depth=6)
 
 class MyListener(StreamListener):
-
 
     def on_status(self, status):
         if status.retweeted:
@@ -70,7 +68,7 @@ class MyListener(StreamListener):
 
         import json
         json = json.dumps(tweet_dict) + '\n'
-        f = open('/Users/yibingyang/Documents/final_thesis_project/Data/negative_test_bf.json',"a+")
+        f = open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/raw_data/positive_test.json',"a+")
         f.write(json)
         f.close()
 
@@ -89,29 +87,31 @@ class MyListener(StreamListener):
     def on_timeout(self):
         return True  # Don't kill the stream
 
-##negative
+##positive
 twitter_stream = Stream(auth, MyListener())
 twitter_stream.filter(
-                      track=[u"\U0001F612",
-                             u"\U0001F613",
-                             u"\U0001F614",
-                             u"\U0001F615",
-                             u"\U0001F616",
-                             u"\U0001F61E",
-                             u"\U0001F61F",
-                             u"\U0001F620",
-                             u"\U0001F621"
-                             u"\U0001F622",
-                             u"\U0001F623",
-                             u"\U0001F624",
-                             u"\U0001F625",
-                             u"\U0001F626",
-                             u"\U0001F627",
-                             u"\U0001F628",
-                             u"\U0001F629",
-                             u"\U0001F62B",
-                             u"\U0001F63E",
-                             u"\U0001F63F"
+                      track=[u"\U0001F600",
+                             u"\U0001F601",
+                             u"\U0001F603",
+                             u"\U0001F604",
+                             u"\U0001F606",
+                             u"\U0001F609",
+                             u"\U0001F60A",
+                             u"\U0001F60C",
+                             u"\U0001F60B",
+                             u"\U0001F60D",
+                             u"\U0001F60E",
+                             u"\U0001F60F",
+                             u"\U0001F617",
+                             u"\U0001F618",
+                             u"\U0001F619",
+                             u"\U0001F61A",
+                             u"\U0001F62C",
+                             u"\U0001F638",
+                             u"\U0001F63A",
+                             u"\U0001F63B",
+                             u"\U0001F63C",
+                             u"\U0001F63D"
                              ],
                       languages=['en']
-                      )
+)

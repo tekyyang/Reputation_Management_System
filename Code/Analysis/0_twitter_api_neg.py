@@ -9,11 +9,12 @@ from tweepy import OAuthHandler
 from tweepy import Stream
 from tweepy.streaming import StreamListener
 import pprint
+from Project.Code.Analysis.access_tokens import consumer_key, consumer_secret, access_token, access_secret
 
-consumer_key = '...'
-consumer_secret = '...'
-access_token = '...'
-access_secret = '...'
+consumer_key = consumer_key
+consumer_secret = consumer_secret
+access_token = access_token
+access_secret = access_secret
 
 auth=OAuthHandler(consumer_key,consumer_secret)
 auth.set_access_token(access_token,access_secret)
@@ -67,7 +68,7 @@ class MyListener(StreamListener):
 
         import json
         json = json.dumps(tweet_dict) + '\n'
-        f = open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/raw_data/positive_test.json',"a+")
+        f = open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/raw_data/negative_test.json',"a+")
         f.write(json)
         f.close()
 
@@ -86,35 +87,30 @@ class MyListener(StreamListener):
     def on_timeout(self):
         return True  # Don't kill the stream
 
-##positive
+##negative
 twitter_stream = Stream(auth, MyListener())
 twitter_stream.filter(
-                      track=[u"\U0001F600",
-                             u"\U0001F601",
-                             u"\U0001F603",
-                             u"\U0001F604",
-                             u"\U0001F606",
-                             u"\U0001F609",
-                             u"\U0001F60A",
-                             u"\U0001F60C",
-                             u"\U0001F60B",
-                             u"\U0001F60D",
-                             u"\U0001F60E",
-                             u"\U0001F60F",
-                             u"\U0001F617",
-                             u"\U0001F618",
-                             u"\U0001F619",
-                             u"\U0001F61A",
-                             u"\U0001F62C",
-                             u"\U0001F638",
-                             u"\U0001F63A",
-                             u"\U0001F63B",
-                             u"\U0001F63C",
-                             u"\U0001F63D"
+                      track=[u"\U0001F612",
+                             u"\U0001F613",
+                             u"\U0001F614",
+                             u"\U0001F615",
+                             u"\U0001F616",
+                             u"\U0001F61E",
+                             u"\U0001F61F",
+                             u"\U0001F620",
+                             u"\U0001F621"
+                             u"\U0001F622",
+                             u"\U0001F623",
+                             u"\U0001F624",
+                             u"\U0001F625",
+                             u"\U0001F626",
+                             u"\U0001F627",
+                             u"\U0001F628",
+                             u"\U0001F629",
+                             u"\U0001F62B",
+                             u"\U0001F63E",
+                             u"\U0001F63F"
                              ],
                       languages=['en']
-<<<<<<< HEAD
                       )
-=======
-                      )
->>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
+
