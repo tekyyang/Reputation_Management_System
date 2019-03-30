@@ -9,11 +9,12 @@ from tweepy import OAuthHandler
 from tweepy import Stream
 from tweepy.streaming import StreamListener
 import pprint
+from Project.Code.Analysis.access_tokens import consumer_key, consumer_secret, access_token, access_secret
 
-consumer_key = '...'
-consumer_secret = '...'
-access_token = '...'
-access_secret = '...'
+consumer_key = consumer_key
+consumer_secret = consumer_secret
+access_token = access_token
+access_secret = access_secret
 
 auth=OAuthHandler(consumer_key,consumer_secret)
 auth.set_access_token(access_token,access_secret)
@@ -113,8 +114,4 @@ twitter_stream.filter(
                              u"\U0001F63D"
                              ],
                       languages=['en']
-<<<<<<< HEAD
-                      )
-=======
-                      )
->>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
+)

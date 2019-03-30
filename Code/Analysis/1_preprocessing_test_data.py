@@ -1,6 +1,7 @@
 import Preprocessing
+import json
 
-<<<<<<< HEAD
+
 def read_and_cleaning(folder_path,filename):
     url = folder_path + filename
     with open(url, 'r') as f:
@@ -20,7 +21,7 @@ iphone_list = read_and_cleaning(path, iphone_file)
 for i in iphone_list:
     print i + '\n'
     print '------------------------'
-=======
+
 # def read_and_cleaning(folder_path,filename):
 #     url = folder_path + filename
 #     with open(url, 'r') as f:
@@ -40,7 +41,6 @@ for i in iphone_list:
 # for i in iphone_list:
 #     print i + '\n'
 #     print '------------------------'
->>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
 
 
 
@@ -89,11 +89,5 @@ with open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_da
 
 with open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/negative_test_tweets.txt', 'w') as f:
     for item in nega_tweets:
-<<<<<<< HEAD
-        f.write("%s\n" % item)
-=======
         f.write("%s\n" % item)
 
-
-
->>>>>>> ffc621c0dfb203e87fecec2b7de159a23642a324
