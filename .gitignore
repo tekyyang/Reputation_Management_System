@@ -3,7 +3,7 @@
 venv/
 
 # ignore tokens
-access_tokens.py
+Code/data_crawling/access_tokens.py
 
 
 
