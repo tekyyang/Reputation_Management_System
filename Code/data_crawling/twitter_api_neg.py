@@ -9,7 +9,7 @@ from tweepy import OAuthHandler
 from tweepy import Stream
 from tweepy.streaming import StreamListener
 import pprint
-from Project.Code.Analysis.access_tokens import consumer_key, consumer_secret, access_token, access_secret
+from access_tokens import consumer_key, consumer_secret, access_token, access_secret
 
 consumer_key = consumer_key
 consumer_secret = consumer_secret
