@@ -13,7 +13,7 @@
 
 import pandas as pd
 import json
-from referring_list import cList, punc_str, positive_emoji_list, negative_emoji_list
+from referring_list import cList, positive_emoji_list, negative_emoji_list
 import string
 import re
 from nltk.stem import PorterStemmer
@@ -21,6 +21,8 @@ from nltk.stem import WordNetLemmatizer
 from unidecode import unidecode
 import numpy as np
 import time
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 
 class label_tweets():
 
@@ -149,14 +151,40 @@ class preprocessing():
         '''
         self.text_list = after_labelled_text_list
 
+    # --- sentence level --- #
+
     def lowercase(self, text_list):
         lower_case_list = [text.lower() for text in text_list]
         return lower_case_list
 
+    _ENCODING_TABLE = {
+        u'\u2002': u' ',
+        u'\u2003': u' ',
+        u'\u2004': u' ',
+        u'\u2005': u' ',
+        u'\u2006': u' ',
+        u'\u2010': u'-',
+        u'\u2011': u'-',
+        u'\u2012': u'-',
+        u'\u2013': u'-',
+        u'\u2014': u'-',
+        u'\u2015': u'-',
+        u'\u2018': u"'",
+        u'\u2019': u"'",
+        u'\u201a': u"'",
+        u'\u201b': u"'",
+        u'\u201c': u'"',
+        u'\u201d': u'"',
+        u'\u201e': u'"',
+        u'\u201f': u'"',
+    }
 
-    # def convert_punc(text_list): ## convert this for the expand contract
-    #     converted_list = [string.replace(unicode(tweet,'utf-8'),'’', '') for tweet in text_list]
-    #     return converted_list
+    def convert_punc(self, text_list): ## convert this for the expand contract
+        text_list = [re.sub(u"(\u2018|\u2019|\u201a|\u201b|\u201c|\u201d|\u201e|\u201f)", "'", tweet) for tweet in text_list]
+        text_list = [re.sub(u"(\u2010|\u2011|\u2012|\u2013|\u2014|\u2015)", "-", tweet) for tweet in text_list]
+        text_list = [re.sub(u"(\u2002|\u2003|\u2004|\u2005|\u2006)", " ", tweet) for tweet in text_list]
+        text_list = [re.sub(u"\\\\u[a-z0-9]+", '', tweet) for tweet in text_list ]
+        return text_list
 
     def expand_contractions(self, text_list):  ##-----change to token level
         cList_keys = cList.keys()  # take all keys as a list
@@ -170,48 +198,41 @@ class preprocessing():
             expand_tweet_list.append(tweet)
         return expand_tweet_list
 
-
-    def remove_tab(self, text_list):
-        clean_list = []
-        for tweet in text_list:
-            tweet = string.replace(tweet, "\n", " ")  # get rid of \n
-            clean_list.append(tweet)
-        return clean_list
-
-
-    def tokenize(self, text_list):
-        tokenized_tweets = []
-        for tweet in text_list:
-            tokens = string.split(tweet, sep=' ')
-            tokenized_tweets.append(tokens)
-        return tokenized_tweets
-
-
     def remove_punc_and_symbols(self, text_list):
         clean_list = []
         for tweet in text_list:
-            tweet = [re.sub(r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', '', token) for
-                     token in tweet]  # drop urls
-            tweet = [re.sub(r'(?:@[\w_]+)', '', token) for token in tweet]  # drop @mention
-            tweet = [re.sub(r'<[^>]+>', '', token) for token in tweet]  # drop html tags
-            tweet = [re.sub(r'(?:(?:\d+,?)+(?:\.?\d+)?)', '', token) for token in tweet]  # drop numbers
-            tweet = [re.sub(r"([a-z]+[-]+[a-z])", '', token) for token in tweet]  # drop words with - and '
-            tweet = [re.sub(r"([:=;][oO\-]?[D\)\]\(\]\\OpP])", '', token) for token in tweet]  # drop string emojis
-            tweet = [string.replace(token, '\n', '') for token in tweet]  # drop \n
-            tweet = [re.sub(r"([\!\#\"\%\$\'\&\)\(\+\*\-\,\/\.\;\:\=\<\?\>\@\[\]\\\_\^\`\{\}\|\~\+]+)", '', token) for token in tweet]  # drop punctuations
-            temp_list = []
-            for token in tweet:
-                try:
-                    token = re.search(r"([a-z]+[\'\-]*[a-z]+)",token).group(0) # take only the words with english letters
-                    temp_list.append(token)
-                except:
-                    continue
-            tweet = [unidecode(token) for token in temp_list] # drop unicode
-            tweet = [token for token in tweet if not token == 'rt']  # drop rt
-            tweet = [token for token in tweet if token != '']  # drop empty strings
+            tweet = re.sub(r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', '', tweet)# drop urls
+            tweet = re.sub(r'(?:@[\w_]+)', '', tweet)   # drop @mention
+            tweet = re.sub(r'<[^>]+>', '', tweet)  # drop html tags
+            tweet = re.sub(r'(?:(?:\d+,?)+(?:\.?\d+)?)', '', tweet)   # drop numbers
+            tweet = re.sub(r"([:=;][oO\-]?[D\)\]\(\]\\OpP])", '', tweet)  # drop string emojis
+            tweet = string.replace(tweet, '\n', ' ')  # drop \n
+            tweet = re.sub(r"([\!\#\"\%\$\'\&\)\(\+\*\-\,\/\.\;\:\=\<\?\>\@\[\]\\\_\^\`\{\}\|\~\+]+)", '', tweet) # drop punctuations
             clean_list.append(tweet)
         return clean_list
 
+    def tokenize_and_stop_word_filter(self, text_list):
+        stop_words = list(set(stopwords.words('english')))+['','rt']
+        tokenized_tweets = [word_tokenize(tweet) for tweet in text_list]
+
+        clean_tokenized_tweets = []
+        for tweet in tokenized_tweets:
+            clean_tokens = []
+            for token in tweet:
+                if token not in stop_words:
+                    clean_tokens.append(unidecode(token))
+            clean_tokenized_tweets.append(clean_tokens)
+
+        re_depuc_tweets = []
+        for tweet in clean_tokenized_tweets:
+            tokens = []
+            for token in tweet:
+                token = re.sub(r"([\!\#\"\%\$\'\&\)\(\+\*\-\,\/\.\;\:\=\<\?\>\@\[\]\\\_\^\`\{\}\|\~\+]+)", '', token)
+                if token <> '':
+                    tokens.append(token)
+            re_depuc_tweets.append(tokens)
+        clean_tokenized_tweets = [tweet for tweet in re_depuc_tweets if tweet <> [] ]
+        return clean_tokenized_tweets
 
     def compressed_repetitive_words(self, text_list):
         clean_list = []
@@ -219,7 +240,6 @@ class preprocessing():
             tweet = [re.sub(r'(.)\1+', r'\1\1', token) for token in tweet]
             clean_list.append(tweet)
         return clean_list
-
 
     def stemming(self, text_list):
         ps = PorterStemmer()
@@ -229,8 +249,7 @@ class preprocessing():
             clean_list.append(tweet)
         return clean_list
 
-
-    def lemmatizing(self, text_list):
+    def lemmatizing(self, text_list): # take more time to run
         wl = WordNetLemmatizer()
         clean_list = []
         for tweet in text_list:
@@ -238,27 +257,37 @@ class preprocessing():
             clean_list.append(tweet)
         return clean_list
 
+    def turn_all_to_string(self, text_list):
+        final_tweet_list = []
+        for tweet in text_list:
+            final_token_list = []
+            for token in tweet:
+                final_token_list.append(token.encode('utf8'))
+            if final_token_list <> []:
+                final_tweet_list.append(final_token_list)
+        return final_tweet_list
 
     def drop_duplicates(self, text_list):
+        sorted_text_list = [sorted(tweet) for tweet in text_list]
+
         clean_list = []
-        for i in text_list:
-            if i not in clean_list:
-                clean_list.append(i)
+        for tweet in sorted_text_list:
+            if tweet not in clean_list:
+                clean_list.append(tweet)
             else:
                 continue
         return clean_list
 
-
     def main(self):
         startTime = time.time()
         text_list = self.lowercase(self.text_list)
-        # tweet_list = convert_punc(text_list)
+        text_list = self.convert_punc(text_list)
         text_list = self.expand_contractions(text_list)
-        text_list = self.remove_tab(text_list)
-        text_list = self.tokenize(text_list)
         text_list = self.remove_punc_and_symbols(text_list)
+        text_list = self.tokenize_and_stop_word_filter(text_list)
         text_list = self.compressed_repetitive_words(text_list)
-        text_list = self.lemmatizing(text_list)
+        text_list = self.stemming(text_list)
+        text_list = self.turn_all_to_string(text_list)
         text_list = self.drop_duplicates(text_list)
         if 'pos' in self.text_list:
             print 'Preprocesing running time for positive tweets is: ' + str(time.time() - startTime)
@@ -282,10 +311,11 @@ class save_to_file():
         print 'Saving to files running time is: ' + str(time.time() - startTime)
 
 
+#comment these before testing
 #-----labelling-----#
-path = '/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/raw_data/'
-posi_filename = 'positive_test.json'
-nega_filename = 'negative_test.json'
+path = '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/raw_data/'
+posi_filename = 'positive.json'
+nega_filename = 'negative.json'
 pos_text_list, neg_text_list = label_tweets(path,posi_filename,nega_filename).main()
 print 'After labelling process, positive tweets are ' + str(len(pos_text_list)) + ' and negative ones are ' + str(len(neg_text_list))
 
@@ -295,7 +325,7 @@ nega_text_list = preprocessing(neg_text_list).main()
 print 'After preprocessing, positive tweets is '+str(len(posi_text_list))+ ' and negative tweets is '+str(len(nega_text_list))
 
 #-----save the result to file-----#
-save_path = '/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/after_preprocessing/'
+save_path = '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/'
 save_filename_posi = 'positive_clean_tweets.txt'
 save_filename_nega = 'negative_clean_tweets.txt'
 save_to_file(save_path,save_filename_posi, posi_text_list).main()
