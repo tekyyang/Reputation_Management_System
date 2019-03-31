@@ -5,6 +5,9 @@ venv/
 # ignore tokens
 Code/data_crawling/access_tokens.py
 
+# ignore cache
+Code/preprocessing/__pycache__/
+
 # General
 .DS_Store
 .AppleDouble

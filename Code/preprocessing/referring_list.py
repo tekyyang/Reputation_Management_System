@@ -5,6 +5,8 @@ import string
 cList = {
   "ain't": "am not",
   "aren't": "are not",
+  "aint": "am not",
+  "arent": "are not",
   "can't": "cannot",
   "can't've": "cannot have",
   "'cause": "because",
@@ -40,7 +42,9 @@ cList = {
   "it'll've": "it will have",
   "it's": "it is",
   "let's": "let us",
+  "lets": "let us",
   "ma'am": "madam",
+  "maam": "madam",
   "mayn't": "may not",
   "might've": "might have",
   "mightn't": "might not",
