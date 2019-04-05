@@ -326,7 +326,7 @@ print 'After preprocessing, positive tweets is '+str(len(posi_text_list))+ ' and
 
 #-----save the result to file-----#
 save_path = '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/'
-save_filename_posi = 'positive_clean_tweets.txt'
-save_filename_nega = 'negative_clean_tweets.txt'
+save_filename_posi = 'positive_tweets_after_preprocessing.txt'
+save_filename_nega = 'negative_tweets_after_preprocessing.txt'
 save_to_file(save_path,save_filename_posi, posi_text_list).main()
 save_to_file(save_path,save_filename_nega, nega_text_list).main()
