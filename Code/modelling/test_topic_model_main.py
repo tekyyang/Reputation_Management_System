@@ -1,9 +1,9 @@
 from topic_model_main import topic_model_builder
 from pandas import DataFrame
-from gensim.models.phrases import Phrases
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import linear_model
+import numpy as np
 
 def test_init():
     test_instance = topic_model_builder(
@@ -123,7 +123,7 @@ def test_build_lda_model():
     token_list_after_feature_selection = [[u'positive', u'tweet', u'one', u'pattern', u'here'],[u'the', u'second', u'token', u'pattern', u'here'],
                                           [u'negative', u'token', u'one', u'pattern', u'here'],[u'some', u'random', u'things', u'pattern', u'here']]
     top_model, model_topics, highest_coherence_score, dictionary, corpus, lad_lsi_processing_time = test_instance.build_lda_lsi_model(token_list_after_feature_selection, min_topic_num = 2, max_topic_num = 5, model='lda')
-    assert model_topics <=5 and model_topics>=2
+    assert len(model_topics) <=5 and len(model_topics)>=2
 
     assert len(dictionary.id2token) == 12 # all the words ever appear in the token list
     assert dictionary.id2token[0] == 'here' and dictionary.id2token[1] == 'one' #{0: u'here', 1: u'one', 2: u'pattern', 3: u'positive', 4: u'tweet',...}
@@ -164,7 +164,8 @@ def test_collect_clustering_info():
     list_k, lable_list, model_list, collect_clustering_info_processing_time = test_instance.collect_clustering_info(tweet_topic_distribution_df, min_cluster_number = 1, max_cluster_number = 3)
 
     assert list_k == [1,2,3]
-    assert lable_list == [[0, 0, 0, 0, 0, 0], [0, 1, 1, 1, 0, 0], [0, 1, 1, 1, 0, 2]]
+
+    assert sorted(lable_list) == [[0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 1, 1], [1, 0, 0, 0, 1, 2]]
     assert all([isinstance(model, KMeans) for model in model_list])
 
 def test_add_clustering_info_to_df():
@@ -227,13 +228,20 @@ def test_test_data_fit_in_model():
 
     list_k, lable_list, model_list, collect_clustering_info_processing_time = test_instance.collect_clustering_info(tweet_topic_distribution_df, min_cluster_number=2, max_cluster_number=10)
 
-    tweet_topic_distribution_with_cluster_df, selected_kmeans_model, number_of_cluster, add_clustering_info_to_df_processing_time = test_instance.add_clustering_info_to_df(tweet_topic_distribution_df, list_k, lable_list, model_list, number_of_cluster=3)
+    tweet_topic_distribution_with_cluster_df, selected_kmeans_model, number_of_cluster, add_clustering_info_to_df_processing_time = test_instance.add_clustering_info_to_df(tweet_topic_distribution_df, list_k, lable_list, model_list, number_of_cluster=2)
 
-    vectorizer_clf_dict, classifier_building_processing_time = test_instance.classifier_building(tweet_topic_distribution_with_cluster_df, 2, token_list_after_feature_selection)
-
-
+    vectorizer_clf_dict, classifier_building_processing_time = test_instance.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection=token_list_after_feature_selection)
 
     Y_test, Y_pred, cluster_label_list, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
+
+    confusion_matrix, classification_report, accuracy_score = test_instance.evaluation(Y_test, Y_pred, cluster_label_list)
+
+    assert len(Y_test) == len(Y_pred)
+    assert len(Y_test) == len(cluster_label_list)
+
+    assert isinstance(confusion_matrix, np.ndarray)
+    assert isinstance(classification_report, unicode)
+    assert isinstance(accuracy_score, np.float)
 
 
 

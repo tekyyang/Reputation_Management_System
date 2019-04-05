@@ -517,10 +517,34 @@ class topic_model_builder():
     def test_data_fit_in_model(self, vectorizer_clf_dict, best_topic_model, dictionary, selected_kmeans_model):
 
         startTime = time.time()
+        # add tracking number for test data
+        # posi
+        posi_test_data_tokens_with_index = []
+        for i in range(len(self.posi_test_data_tokens)):
+            posi_test_data_tokens_with_index.append((i, self.posi_test_data_tokens[i]))
+        # nega
+        nega_test_data_tokens_with_index = []
+        for i in range(len(self.nega_test_data_tokens)):
+            nega_test_data_tokens_with_index.append((i, self.nega_test_data_tokens[i]))
 
         # create corpus for test dataset based on the dictionary of the chosen model
-        test_posi_corpus = [dictionary.doc2bow(text) for text in self.posi_test_data_tokens if dictionary.doc2bow(text) <> []]  # for some tweet in test, the bow could be []
-        test_nega_corpus = [dictionary.doc2bow(text) for text in self.nega_test_data_tokens if dictionary.doc2bow(text) <> []]
+        # posi
+        test_posi_corpus, chosen_posi_index, unchosen_posi_index = [] ,[], []
+        for item in posi_test_data_tokens_with_index:
+            if dictionary.doc2bow(item[1]) <> []:
+                test_posi_corpus.append(dictionary.doc2bow(item[1]))
+                chosen_posi_index.append(item[0])
+            else:
+                unchosen_posi_index.append(item[0])
+        # nega
+        test_nega_corpus, chosen_nega_index, unchosen_nega_index = [] ,[], []
+        for item in nega_test_data_tokens_with_index:
+            if dictionary.doc2bow(item[1]) <> []:
+                test_posi_corpus.append(dictionary.doc2bow(item[1]))
+                chosen_nega_index.append(item[0])
+            else:
+                unchosen_nega_index.append(item[0])
+
         test_corpus = test_posi_corpus + test_nega_corpus
 
         # for each test data, use the best topic model we built to get the tweet, topic distribution
@@ -529,25 +553,35 @@ class topic_model_builder():
         cluster_label_list = []  # generate label list for all test tweets
         for i in range(len(test_corpus)):
             test_tweet_prob_distribution = [prob_tuple[1] for prob_tuple in best_topic_model[test_corpus[i]]]
-            cluster_label = selected_kmeans_model.predict(test_tweet_prob_distribution)
+            cluster_label = selected_kmeans_model.predict([test_tweet_prob_distribution])
             cluster_label_list.append(cluster_label.tolist()[0])
 
         # apply the certian classifier on the test tweet
-        Y_pred = []
-        Y_test = len(test_posi_corpus) * [1] + len(test_nega_corpus) * [0]
+        X_test_posi_df = self.posi_test_data_df[self.posi_test_data_df.index == chosen_posi_index]
+        X_test_nega_df = self.nega_test_data_df[self.nega_test_data_df.index == chosen_nega_index]
 
-        for i in range(len(cluster_label_list)):
+        X_test_df = pd.concat([X_test_posi_df, X_test_nega_df]).reset_index()
+        X_test_df['cluster_label'] = cluster_label_list
+
+        Y_test = []
+        Y_pred = []
+        for i in set(cluster_label_list):
             for j in vectorizer_clf_dict.keys():
-                if cluster_label_list[i] == j:
+                if i == j:
+
                     # select the corresponding vectorizer and clf
                     vectorizer = vectorizer_clf_dict[j][0]  # vectorizer
                     clf = vectorizer_clf_dict[j][1]  # clf
 
-                    x_raw_tweet = [str(k[0]) for k in test_corpus[i]] #['957', '1005', '1102', '1336', '2989']
-                    x_raw_tweet = [' '.join(x_raw_tweet)] #['957 1005 1102 1336 2989']
-                    x_test = vectorizer.transform(x_raw_tweet).toarray()
-                    y_pred = clf.predict(x_test)
+                    selected_cluster_piece_df = X_test_df[X_test_df['cluster_label'] == i]
+                    selected_cluster_X_test = selected_cluster_piece_df['tweets'].tolist()
+                    selected_cluster_Y_test = selected_cluster_piece_df['label'].tolist()
+                    Y_test = Y_test + selected_cluster_Y_test
+
+                    X_test = vectorizer.transform(selected_cluster_X_test).toarray()
+                    y_pred = clf.predict(X_test)
                     Y_pred = Y_pred + y_pred.tolist()
+                    print 'finish cluster ' + str(i)
 
         print '=== (8) Finish test data fit in! Taking ' + str(round((time.time() - startTime), 4)) + 's ===\n'
 
@@ -604,6 +638,8 @@ class topic_model_builder():
 
             print 'For group ' + str(i) + ' - accuracy score:'
             print(accuracy_score(group_Y_test, group_Y_pred))
+
+        return cm, classification_report(group_Y_test, group_Y_pred), accuracy_score(group_Y_test, group_Y_pred)
 
 
     # --- baseline classifier building start --- #
@@ -768,13 +804,13 @@ class topic_model_builder():
         self.baseline_evaluation(Y_test, baseline_result)
 
 
-trail = topic_model_builder(
-    training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_tweets_after_preprocessing.txt',
-    training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_tweets_after_preprocessing.txt',
-    test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_test_tweets_after_preprocessing.txt',
-    test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_test_tweets_after_preprocessing.txt')
+# trail = topic_model_builder(
+#     training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_tweets_after_preprocessing.txt',
+#     training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_tweets_after_preprocessing.txt',
+#     test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_test_tweets_after_preprocessing.txt',
+#     test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_test_tweets_after_preprocessing.txt')
 
-trail.main()
+# trail.main()
 
 # http://www.apnorton.com/blog/2016/12/19/Visualizing-Multidimensional-Data-in-Python/
 # https://towardsdatascience.com/k-means-clustering-algorithm-applications-evaluation-methods-and-drawbacks-aa03e644b48a
