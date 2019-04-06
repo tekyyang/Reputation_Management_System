@@ -580,8 +580,6 @@ class topic_model_builder():
         X_test_df = pd.concat([X_test_posi_df, X_test_nega_df]).reset_index()
         X_test_df['cluster_label'] = cluster_label_list
 
-        Y_test = []
-        Y_pred = []
         restructured_X_test_df = None
         # apply the certian classifier on the test tweet
         for i in set(cluster_label_list):
@@ -594,14 +592,11 @@ class topic_model_builder():
 
                     selected_cluster_piece_df = X_test_df[X_test_df['cluster_label'] == i]
                     selected_cluster_X_test = selected_cluster_piece_df['tweets'].tolist()
-                    selected_cluster_Y_test = selected_cluster_piece_df['label'].tolist()
-                    Y_test = Y_test + selected_cluster_Y_test
 
                     X_test = vectorizer.transform(selected_cluster_X_test).toarray()
                     y_pred = clf.predict(X_test)
                     selected_cluster_piece_df['y_pred'] = y_pred
                     restructured_X_test_df = pd.concat([restructured_X_test_df,selected_cluster_piece_df]) if restructured_X_test_df is not None else selected_cluster_piece_df
-                    Y_pred = Y_pred + y_pred.tolist()
                     print 'finish cluster ' + str(i)
 
         print '=== (8) Finish test data fit in! Taking ' + str(round((time.time() - startTime), 4)) + 's ===\n'
@@ -610,10 +605,14 @@ class topic_model_builder():
 
         print '=== The overall program taking ' + str(round((time.time() - self.class_startTime), 4)) + 's! ===\n'
 
-        return Y_test, Y_pred, cluster_label_list, restructured_X_test_df, test_data_fit_in_processing_time
+        return restructured_X_test_df, test_data_fit_in_processing_time
 
-    def evaluation(self, Y_test, Y_pred, cluster_label_list):
+    def evaluation(self,restructured_X_test_df):
         print "=== (9) Performance evaluation moment! ==="
+        Y_test = restructured_X_test_df['label'].tolist()
+        Y_pred = restructured_X_test_df['y_pred'].tolist()
+        cluster_label_list = restructured_X_test_df['cluster_label'].tolist()
+
 
         print "Overall Performance - confusion matrix:"
         cm = confusion_matrix(Y_test, Y_pred)
