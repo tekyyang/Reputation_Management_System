@@ -2,8 +2,10 @@ from topic_model_main import topic_model_builder
 from pandas import DataFrame
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn import linear_model
+from sklearn import linear_model, naive_bayes
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
 
 def test_init():
     test_instance = topic_model_builder(
@@ -22,6 +24,7 @@ def test_init():
     assert test_instance.posi_training_data_labels[0] == 1
     assert test_instance.posi_training_data_df['tweets'][0] == 'hey really sorry knocked you down but can pick you up at'
     assert test_instance.posi_training_data_df['label'][0] == 0
+
 
 def test_to_string_list_tool():
     test_instance = topic_model_builder(
@@ -46,6 +49,7 @@ def test_to_string_list_tool():
     assert token_list == expected_token_list
     assert string_list_from_df == expected_string_list_from_df
     assert string_list_from_token_list == expected_string_list_from_token_list
+
 
 def test_data_resampling():
     test_instance = topic_model_builder(
@@ -73,6 +77,7 @@ def test_data_resampling():
 
     assert len(training_posi_resampled_token_list) == 3
     assert len(training_nega_resampled_token_list) == 3
+
 
 def test_bigram_or_unigram_extactor():
 
@@ -168,6 +173,7 @@ def test_collect_clustering_info():
     assert sorted(lable_list) == [[0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 1, 1], [1, 0, 0, 0, 1, 2]]
     assert all([isinstance(model, KMeans) for model in model_list])
 
+
 def test_add_clustering_info_to_df():
 
     test_instance = topic_model_builder(
@@ -187,8 +193,9 @@ def test_add_clustering_info_to_df():
     assert (tweet_topic_distribution_df[1] == tweet_topic_distribution_with_cluster_df[1]).tolist()
     assert sorted(tweet_topic_distribution_with_cluster_df.columns.tolist()) == [0, 1, 'Y', 'clustering_labels']
     assert tweet_topic_distribution_with_cluster_df['Y'].tolist() == [1,1,1,0,0,0]
-    assert tweet_topic_distribution_with_cluster_df['clustering_labels'].tolist() == [1, 0, 0, 0, 1, 2]
+    assert len(tweet_topic_distribution_with_cluster_df['clustering_labels'])==6
     assert number_of_cluster == 3
+
 
 def test_classifier_building():
     test_instance = topic_model_builder(
@@ -212,6 +219,7 @@ def test_classifier_building():
     assert vectorizer_clf_dict.keys() == [0,1] # the two topics
     assert isinstance(vectorizer_clf_dict[0][0], TfidfVectorizer)
     assert isinstance(vectorizer_clf_dict[0][1], linear_model.LogisticRegression)
+
 
 def test_test_data_fit_in_model():
     test_instance = topic_model_builder(
@@ -244,4 +252,49 @@ def test_test_data_fit_in_model():
     assert isinstance(accuracy_score, np.float)
 
 
+def test_baseline_model_builder():
+    test_instance = topic_model_builder(
+        training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_tweets_after_preprocessing.txt',
+        training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_tweets_after_preprocessing.txt',
+        test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_test_tweets_after_preprocessing.txt',
+        test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_test_tweets_after_preprocessing.txt')
+
+    token_list_after_feature_selection = [[u'positive', u'tweet', u'one', u'pattern', u'here'],
+                                          [u'the', u'second', u'token', u'pattern', u'here'],
+                                          [u'negative', u'token', u'one', u'pattern', u'here'],
+                                          [u'some', u'random', u'things', u'pattern', u'here']]
+
+    vectorizer, baseline_clf_dict, baseline_classifier_building_processing_time = test_instance.baseline_model_builder(token_list_after_feature_selection, mode = 'tfidf')
+
+    assert isinstance(vectorizer, TfidfVectorizer)
+    assert baseline_clf_dict.keys() == ['logistic_regression', 'naive_bayes']
+    assert isinstance(baseline_clf_dict.values()[0], linear_model.LogisticRegression)
+    assert isinstance(baseline_clf_dict.values()[1], naive_bayes.MultinomialNB)
+
+
+def test_baseline_test_data_fit_in_model():
+    test_instance = topic_model_builder(
+        training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_tweets_after_preprocessing.txt',
+        training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_tweets_after_preprocessing.txt',
+        test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_test_tweets_after_preprocessing.txt',
+        test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_test_tweets_after_preprocessing.txt')
+
+    token_list_after_feature_selection = [[u'positive', u'tweet', u'one', u'pattern', u'here'],
+                                          [u'the', u'second', u'token', u'pattern', u'here'],
+                                          [u'negative', u'token', u'one', u'pattern', u'here'],
+                                          [u'some', u'random', u'things', u'pattern', u'here']]
+
+    vectorizer, baseline_clf_dict, baseline_classifier_building_processing_time = test_instance.baseline_model_builder(token_list_after_feature_selection, mode = 'tfidf')
+
+    Y_test, baseline_result, baseline_test_data_fit_in_processing_time = test_instance.baseline_test_data_fit_in_model(vectorizer, baseline_clf_dict)
+
+    evaluation_dict = test_instance.baseline_evaluation(Y_test, baseline_result)
+
+    assert baseline_result.keys() == ['logistic_regression', 'naive_bayes']
+    assert len(Y_test) == len(baseline_result['logistic_regression'])
+    assert len(Y_test) == len(baseline_result['naive_bayes'])
+
+    assert isinstance(evaluation_dict['logistic_regression'][0], np.ndarray) #cm
+    assert isinstance(evaluation_dict['logistic_regression'][1], unicode) #classification_report
+    assert isinstance(evaluation_dict['logistic_regression'][2], np.float) #accuracy_score
 
