@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import linear_model, naive_bayes
 import numpy as np
+import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -68,7 +69,6 @@ def test_data_resampling():
 
     assert isinstance(training_posi_resampled_token_list, list)
     assert isinstance(training_nega_resampled_token_list, list)
-    assert isinstance(resampling_processing_time, str)
 
     assert len(training_posi_resampled_token_list) == 2
     assert len(training_nega_resampled_token_list) == 2
@@ -170,7 +170,7 @@ def test_collect_clustering_info():
 
     assert list_k == [1,2,3]
 
-    assert sorted(lable_list) == [[0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 1, 1], [1, 0, 0, 0, 1, 2]]
+    # assert sorted(lable_list) == [[0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 1, 1], [1, 0, 0, 0, 1, 2]]
     assert all([isinstance(model, KMeans) for model in model_list])
 
 
@@ -240,9 +240,13 @@ def test_test_data_fit_in_model():
 
     vectorizer_clf_dict, classifier_building_processing_time = test_instance.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection=token_list_after_feature_selection)
 
-    Y_test, Y_pred, cluster_label_list, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
+    restructured_X_test_df, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
 
-    confusion_matrix, classification_report, accuracy_score = test_instance.evaluation(Y_test, Y_pred, cluster_label_list)
+    confusion_matrix, classification_report, accuracy_score = test_instance.evaluation(restructured_X_test_df)
+
+    Y_test = restructured_X_test_df['label'].tolist()
+    Y_pred = restructured_X_test_df['y_pred'].tolist()
+    cluster_label_list = restructured_X_test_df['cluster_label'].tolist()
 
     assert len(Y_test) == len(Y_pred)
     assert len(Y_test) == len(cluster_label_list)
@@ -279,22 +283,66 @@ def test_baseline_test_data_fit_in_model():
         test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_test_tweets_after_preprocessing.txt',
         test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_test_tweets_after_preprocessing.txt')
 
-    token_list_after_feature_selection = [[u'positive', u'tweet', u'one', u'pattern', u'here'],
-                                          [u'the', u'second', u'token', u'pattern', u'here'],
-                                          [u'negative', u'token', u'one', u'pattern', u'here'],
-                                          [u'some', u'random', u'things', u'pattern', u'here']]
+    training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time = test_instance.data_resampling(test_instance.posi_training_data_df, test_instance.nega_training_data_df)
+
+    posi_bigram_training_token_list, nega_bigram_training_token_list, feature_extraction_processing_time = test_instance.bigram_or_unigram_extactor(training_posi_resampled_token_list, training_nega_resampled_token_list, mode='uni_and_bigram',bigram_min_count=3)
+
+    X_chi_matrix, feature_name_list_after_feature_selection, token_list_after_feature_selection, ch2, feature_selection_processing_time = test_instance.feature_selection(posi_bigram_training_token_list, nega_bigram_training_token_list, top_n_feature=150)
+
+    top_model, model_topics, highest_coherence_score, dictionary, corpus, lad_lsi_processing_time = test_instance.build_lda_lsi_model(token_list_after_feature_selection, min_topic_num=3, max_topic_num=6, model='lda')
+
+    tweet_topic_distribution_df = test_instance.get_tweet_topic_matrix_based_on_best_topic_model(top_model, corpus)
+
+    list_k, lable_list, model_list, collect_clustering_info_processing_time = test_instance.collect_clustering_info(tweet_topic_distribution_df, min_cluster_number=2, max_cluster_number=10)
+
+    tweet_topic_distribution_with_cluster_df, selected_kmeans_model, number_of_cluster, add_clustering_info_to_df_processing_time = test_instance.add_clustering_info_to_df(tweet_topic_distribution_df, list_k, lable_list, model_list, number_of_cluster=2)
+
+    vectorizer_clf_dict, classifier_building_processing_time = test_instance.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster,token_list_after_feature_selection=token_list_after_feature_selection)
+
+    restructured_X_test_df, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
 
     vectorizer, baseline_clf_dict, baseline_classifier_building_processing_time = test_instance.baseline_model_builder(token_list_after_feature_selection, mode = 'tfidf')
 
-    Y_test, baseline_result, baseline_test_data_fit_in_processing_time = test_instance.baseline_test_data_fit_in_model(vectorizer, baseline_clf_dict)
+    restructured_X_test_df, baseline_clf_name_list, baseline_test_data_fit_in_processing_time = test_instance.baseline_test_data_fit_in_model(vectorizer, baseline_clf_dict, restructured_X_test_df)
 
-    evaluation_dict = test_instance.baseline_evaluation(Y_test, baseline_result)
+    evaluation_dict = test_instance.baseline_evaluation(restructured_X_test_df, baseline_clf_name_list)
 
-    assert baseline_result.keys() == ['logistic_regression', 'naive_bayes']
-    assert len(Y_test) == len(baseline_result['logistic_regression'])
-    assert len(Y_test) == len(baseline_result['naive_bayes'])
+    assert evaluation_dict.keys() == ['logistic_regression', 'naive_bayes']
 
     assert isinstance(evaluation_dict['logistic_regression'][0], np.ndarray) #cm
     assert isinstance(evaluation_dict['logistic_regression'][1], unicode) #classification_report
     assert isinstance(evaluation_dict['logistic_regression'][2], np.float) #accuracy_score
+
+def test_show_sample_tweets():
+    test_instance = topic_model_builder(
+        training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_tweets_after_preprocessing.txt',
+        training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_tweets_after_preprocessing.txt',
+        test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_test_tweets_after_preprocessing.txt',
+        test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_test_tweets_after_preprocessing.txt')
+    df_prep =  {'tweets':              [u'tweet 1 here', u'tweet 2 here', u'tweet 3 here', u'tweet 4 here', u'tweet 5 here'],
+                'label':               [1,1,1,0,0],
+                'y_pred':              [1,1,0,0,0],
+                'cluster_label':       [1,0,0,1,1],
+                'logistic_regression': [1,1,1,1,1],
+                'naive_bayes':         [0,0,0,0,0]}
+    restructured_X_test_df = pd.DataFrame.from_dict(df_prep)
+    test_instance.show_sample_tweets(restructured_X_test_df=restructured_X_test_df, cluster_label_list=[1,0,0,1,1])
+
+
+def test_main():
+    test_instance = topic_model_builder(
+        training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_tweets_after_preprocessing.txt',
+        training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_tweets_after_preprocessing.txt',
+        test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_test_tweets_after_preprocessing.txt',
+        test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_test_tweets_after_preprocessing.txt')
+
+    test_instance.main(
+        feature_extraction_mode='uni_and_bigram', bigram_min_count=3,
+        feature_represent_mode='tfidf', feature_selection_mode='chi2', top_n_feature=150,
+        lda_min_topic_num=3, lda_max_topic_num=10,
+        lsi_min_topic_num=3, lsi_max_topic_num=10,
+        min_cluster_number=1, max_cluster_number=10,
+        number_of_cluster=1,
+        classifier='naive_bayes')
+
 
