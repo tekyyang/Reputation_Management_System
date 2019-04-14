@@ -240,7 +240,7 @@ def test_test_data_fit_in_model():
 
     vectorizer_clf_dict, classifier_building_processing_time = test_instance.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection=token_list_after_feature_selection)
 
-    restructured_X_test_df, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
+    restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
 
     confusion_matrix, classification_report, accuracy_score = test_instance.evaluation(restructured_X_test_df)
 
@@ -299,7 +299,7 @@ def test_baseline_test_data_fit_in_model():
 
     vectorizer_clf_dict, classifier_building_processing_time = test_instance.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster,token_list_after_feature_selection=token_list_after_feature_selection)
 
-    restructured_X_test_df, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
+    restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time = test_instance.test_data_fit_in_model(vectorizer_clf_dict, top_model, dictionary, selected_kmeans_model)
 
     vectorizer, baseline_clf_dict, baseline_classifier_building_processing_time = test_instance.baseline_model_builder(token_list_after_feature_selection, mode = 'tfidf')
 

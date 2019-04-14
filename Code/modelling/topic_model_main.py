@@ -313,7 +313,6 @@ class topic_model_builder():
         dictionary = Dictionary(token_list_after_feature_selection)  # Dictionary(16300 unique tokens: [u'jaesuk', u'sermersheim', u'headband', u'degenere', u'jetline']...)
         corpus = [dictionary.doc2bow(text) for text in token_list_after_feature_selection]
 
-
         if max_topic_num < min_topic_num:
             raise ValueError("Please enter limit > %d. You entered %d" % (min_topic_num, max_topic_num))
         c_v = []
@@ -331,7 +330,7 @@ class topic_model_builder():
             lm_list.append(lm)
             cm = CoherenceModel(model=lm, texts=token_list_after_feature_selection, dictionary=dictionary, coherence='c_v')
             c_v.append(cm.get_coherence())
-            print 'finish building topic = {0}\r'.format(str(num_topics))
+            # print '\rfinish building topic = {0}\r'.format(str(num_topics))
 
         print '=== (4) Finish ' + model + ' graph building! Taking '  + str(round((time.time() - startTime),4)) + 's ===\n'
 
@@ -390,12 +389,20 @@ class topic_model_builder():
                                   lda_highest_coherence_score, lsi_highest_coherence_score, hdp_coherence_score,
                                   corpus_lda, corpus_lsi, corpus_hdp,
                                   dictionary_lda, dictionary_lsi, dictionary_hdp):
+
         if lda_highest_coherence_score > hdp_coherence_score and lda_highest_coherence_score > lsi_highest_coherence_score:
-            return lda_model, 'lda', corpus_lda, dictionary_lda
+            topic_model, topic_model_name, corpus, dictionary = lda_model, 'lda', corpus_lda, dictionary_lda
         elif lsi_highest_coherence_score > hdp_coherence_score:
-            return lsi_model, 'lsi', corpus_lsi, dictionary_lsi
+            topic_model, topic_model_name, corpus, dictionary = lsi_model, 'lsi', corpus_lsi, dictionary_lsi
         else:
-            return hdp_mode, 'hdp', corpus_hdp, dictionary_hdp
+            topic_model, topic_model_name, corpus, dictionary = hdp_mode, 'hdp', corpus_hdp, dictionary_hdp
+
+        if self.plot_flag==True:
+            import pyLDAvis
+            vis_data = pyLDAvis.gensim.prepare(topic_model, corpus, dictionary)
+            pyLDAvis.display(vis_data)
+
+        return topic_model, topic_model_name, corpus, dictionary
 
     def get_tweet_topic_matrix_based_on_best_topic_model(self, best_topic_model, corpus):
         #https://groups.google.com/forum/#!topic/gensim/F4AWfh9yIhM
@@ -413,7 +420,6 @@ class topic_model_builder():
 
         startTime = time.time()
         print '=== (5) Start collecting clustering info... ===\n'
-
 
         # Run the Kmeans algorithm and get the index of data points clusters
         inertia_list = []
@@ -605,7 +611,7 @@ class topic_model_builder():
 
         print '=== The overall program taking ' + str(round((time.time() - self.class_startTime), 4)) + 's! ===\n'
 
-        return restructured_X_test_df, test_data_fit_in_processing_time
+        return restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time
 
     def evaluation(self,restructured_X_test_df):
         print "=== (9) Performance evaluation moment! ==="
@@ -795,29 +801,17 @@ class topic_model_builder():
             piece_wrong = piece[piece['label'] <> piece['y_pred']].head(head)
             final_piece = pd.concat([piece_correct, piece_wrong]).reset_index()
             print 'sample tweets for cluster '+str(i)+' :'
-            print final_piece
-
-        # cluster_index_set = set(cluster_label_list)
-        # for i in cluster_index_set:
-        #     print 'Correct prediction for cluster ' + str(i) + ':'
-        #     restructured_X_test_df[
-        #         restructured_X_test_df['cluster_label'] == i & restructured_X_test_df['cluster_label'] ==
-        #         restructured_X_test_df['label']].head(head)
-        #
-        #     print 'Wrong prediction for cluster ' + str(i) + ':'
-        #     restructured_X_test_df[
-        #         restructured_X_test_df['cluster_label'] == i & restructured_X_test_df['cluster_label'] <>
-        #         restructured_X_test_df['label']].head(head)
+            print final_piece[['tweets','label','y_pred','logistic_regression','naive_bayes','cluster_label']]
 
     def main(self,
              feature_extraction_mode = 'uni_and_bigram', bigram_min_count=20,
-             feature_represent_mode='tfidf', feature_selection_mode='chi2', top_n_feature=5000,
+             feature_represent_mode='tfidf', feature_selection_mode='chi2', top_n_feature=20000,
              lda_min_topic_num=3, lda_max_topic_num=30,
              lsi_min_topic_num=3, lsi_max_topic_num=30,
              min_cluster_number=2, max_cluster_number=30,
              number_of_cluster=6,
              classifier = 'naive_bayes',
-             show_sample_tweets_head=10):
+             show_sample_tweets_head=15):
 
         startTime = time.time()
 
@@ -845,13 +839,14 @@ class topic_model_builder():
 
         # ------ classification ------ #
         vectorizer_clf_dict, classifier_building_processing_time = self.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection, classifier = classifier)
-        restructured_X_test_df, test_data_fit_in_processing_time = self.test_data_fit_in_model(vectorizer_clf_dict, best_topic_model, dictionary, selected_kmeans_model)
+        restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time = self.test_data_fit_in_model(vectorizer_clf_dict, best_topic_model, dictionary, selected_kmeans_model)
         self.evaluation(restructured_X_test_df)
-        # self.show_sample_tweets(restructured_X_test_df, cluster_label_list, head=show_sample_tweets_head)
 
         # ------ baseline clf ------ #
         vectorizer, baseline_clf_dict, baseline_classifier_building_processing_time = self.baseline_model_builder(token_list_after_feature_selection)
         Y_test, baseline_result, baseline_test_data_fit_in_processing_time = self.baseline_test_data_fit_in_model(vectorizer, baseline_clf_dict, restructured_X_test_df)
+
+        self.show_sample_tweets(restructured_X_test_df, cluster_label_list, head=show_sample_tweets_head)
         self.baseline_evaluation(Y_test, baseline_result)
 
         print 'Program running time: '+str(round((time.time() - startTime), 4))
@@ -876,14 +871,16 @@ class topic_model_builder():
         print 'baseline_test_data_fit_in_processing_time: '+str(baseline_classifier_building_processing_time)
 
 
-# trail = topic_model_builder(
-#     training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_tweets_after_preprocessing.txt',
-#     training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_tweets_after_preprocessing.txt',
-#     test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_test_tweets_after_preprocessing.txt',
-#     test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_test_tweets_after_preprocessing.txt',
-#     plot_flag=False)
-#
-# trail.main()
+trail = topic_model_builder(
+    training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_tweets_after_preprocessing_0407.txt',
+    training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_tweets_after_preprocessing_0407.txt',
+    # test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_test_tweets_after_preprocessing.txt',
+    # test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_test_tweets_after_preprocessing.txt',
+    test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/E-Commerce/after_preprocessing/yelp_posi_after_preprocessing.txt',
+    test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/E-Commerce/after_preprocessing/yelp_nega_after_preprocessing.txt',
+    plot_flag=False)
+
+trail.main()
 
 # http://www.apnorton.com/blog/2016/12/19/Visualizing-Multidimensional-Data-in-Python/
 # https://towardsdatascience.com/k-means-clustering-algorithm-applications-evaluation-methods-and-drawbacks-aa03e644b48a
@@ -895,26 +892,6 @@ class topic_model_builder():
 
 # https://machinelearningmastery.com/feature-selection-machine-learning-python/ feature selection
 # https://www.analyticsvidhya.com/blog/2018/04/a-comprehensive-guide-to-understand-and-implement-text-classification-in-python/
-'''
-potential improvements:
-0) deal with [] after feature selection (don't need to)
-1) add a baseline for comparison before running topic model (done)
-2) evaluate the performance for each classifer to see if there is anything we can improve based on the topic model (done, needs to debug)
-- add topic model visualization
-- add clustering visualization 
 
-
-
-- test something new based on the topic models
-- add part-of-speech analysis in the dataset part
-- something
-
-# a model that with noisy labels as initial labels, and can get evolved when user add some customized topics into it
-# compare different model's performance and accuracy
-# --- for each model, how's the accuracy when adding more data into the model and how's the increase of time
-# find a performance (time) and accuracy rate
-# use new data with emojis to replace old data periodically; and based on the rate, use the new topic related data to replace the old data
-
-'''
 
 
