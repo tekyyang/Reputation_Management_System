@@ -10,7 +10,7 @@
 #https://www.youtube.com/watch?v=5aJKKgSEUnY
 #video about unicode
 
-
+# -*- coding: utf-8 -*-
 import pandas as pd
 import json
 from referring_list import cList, positive_emoji_list, negative_emoji_list
@@ -48,33 +48,32 @@ class label_tweets():
             with open(url, 'r') as f:
                 lines = f.readlines()  # read all the lines in the file
                 tweets = [json.loads(line) for line in lines]  # load them as Python dict
-
-                for tweet_dict in tweets:
-                    tweet_dict["hashtags"] = tweet_dict["entities"]["hashtags"]
-                    tweet_dict["hashtags_num"] = len(tweet_dict["entities"]["hashtags"])
-
-                    tweet_dict["symbols"] = tweet_dict["entities"]["symbols"]
-                    tweet_dict["symbols_num"] = len(tweet_dict["entities"]["symbols"])
-
-                    tweet_dict["urls"] = tweet_dict["entities"]["urls"]
-                    tweet_dict["urls_num"] = len(tweet_dict["entities"]["urls"])
-
-                    tweet_dict["user_mentions"] = tweet_dict["entities"]["user_mentions"]
-                    tweet_dict["user_mentions_num"] = len(tweet_dict["entities"]["user_mentions"])
+                #
+                # for tweet_dict in tweets:
+                #     tweet_dict["hashtags"] = tweet_dict["entities"]["hashtags"]
+                #     tweet_dict["hashtags_num"] = len(tweet_dict["entities"]["hashtags"])
+                #
+                #     tweet_dict["symbols"] = tweet_dict["entities"]["symbols"]
+                #     tweet_dict["symbols_num"] = len(tweet_dict["entities"]["symbols"])
+                #
+                #     tweet_dict["urls"] = tweet_dict["entities"]["urls"]
+                #     tweet_dict["urls_num"] = len(tweet_dict["entities"]["urls"])
+                #
+                #     tweet_dict["user_mentions"] = tweet_dict["entities"]["user_mentions"]
+                #     tweet_dict["user_mentions_num"] = len(tweet_dict["entities"]["user_mentions"])
 
                 tweet_df = pd.DataFrame.from_dict(tweets) #it's okay
                 self.tweet_df = tweet_df[[
-
-                    'id_str','retweeted','retweets',
-                    # time
-                    'created','time_zone','utc_offset',
-                    # location
-                    'coords','geo','loc','location',
-
-                    'hashtags','hashtags_num','symbols','symbols_num','urls','urls_num','user_mentions','user_mentions_num',
-                    # user
-                    'name','user_created','description','place','followers',
-
+                    # 'id_str','retweeted','retweets',
+                    # # time
+                    # 'created','time_zone','utc_offset',
+                    # # location
+                    # 'coords','geo','loc','location',
+                    #
+                    # 'hashtags','hashtags_num','symbols','symbols_num','urls','urls_num','user_mentions','user_mentions_num',
+                    # # user
+                    # 'name','user_created','description','place','followers',
+                    #
                     'source','text',
                 ]]
 
@@ -212,15 +211,18 @@ class preprocessing():
         return clean_list
 
     def tokenize_and_stop_word_filter(self, text_list):
-        stop_words = list(set(stopwords.words('english')))+['','rt']
+        # stop_words = list(set(stopwords.words('english')))+['','rt']
         tokenized_tweets = [word_tokenize(tweet) for tweet in text_list]
 
         clean_tokenized_tweets = []
         for tweet in tokenized_tweets:
             clean_tokens = []
             for token in tweet:
-                if token not in stop_words:
+                # if token not in stop_words:
+                try:
                     clean_tokens.append(unidecode(token))
+                except:
+                    pass
             clean_tokenized_tweets.append(clean_tokens)
 
         re_depuc_tweets = []
@@ -311,11 +313,11 @@ class save_to_file():
         print 'Saving to files running time is: ' + str(time.time() - startTime)
 
 
-#comment these before testing
+# comment these before testing
 #-----labelling-----#
 path = '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/raw_data/'
-posi_filename = 'positive.json'
-nega_filename = 'negative.json'
+posi_filename = 'positive_0407.json'
+nega_filename = 'negative_0407.json'
 pos_text_list, neg_text_list = label_tweets(path,posi_filename,nega_filename).main()
 print 'After labelling process, positive tweets are ' + str(len(pos_text_list)) + ' and negative ones are ' + str(len(neg_text_list))
 
@@ -326,7 +328,7 @@ print 'After preprocessing, positive tweets is '+str(len(posi_text_list))+ ' and
 
 #-----save the result to file-----#
 save_path = '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/'
-save_filename_posi = 'positive_clean_tweets.txt'
-save_filename_nega = 'negative_clean_tweets.txt'
+save_filename_posi = 'positive_tweets_after_preprocessing_0407.txt'
+save_filename_nega = 'negative_tweets_after_preprocessing_0407.txt'
 save_to_file(save_path,save_filename_posi, posi_text_list).main()
 save_to_file(save_path,save_filename_nega, nega_text_list).main()

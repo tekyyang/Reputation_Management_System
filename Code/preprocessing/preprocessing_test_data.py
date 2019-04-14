@@ -1,93 +1,66 @@
 from preprocessing_training_data import preprocessing
 import json
+import pandas as pd
 
 
-def read_and_cleaning(folder_path,filename):
-    url = folder_path + filename
+def read_and_cleaning(folder_path,filename, tweet_column_num = 2, label_column_num = 1):
+    url = folder_path +  filename
+    tweets, labels = [], []
     with open(url, 'r') as f:
         lines = f.readlines()  # read all the lines in the file
-        tweets = [json.loads(line) for line in lines]  # load them as Python dict
-        tweets_list = [tweet['text'] for tweet in tweets]
-        return tweets_list
+        for line in lines:
+            line_list = line.split(',')
+            tweets.append(line_list[tweet_column_num])
+            labels.append(line_list[label_column_num])
+    return tweets, labels
 
-
-path = '/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/'
-iphone_file = 'iphone_stream_testdata_collection.json'
-BeAVoter_file = 'BeAVoter.json'
-MidtermElections_file = 'MidtermElections2018.json'
-
-iphone_list = read_and_cleaning(path, iphone_file)
-
-for i in iphone_list:
-    print i + '\n'
-    print '------------------------'
-
-# def read_and_cleaning(folder_path,filename):
-#     url = folder_path + filename
-#     with open(url, 'r') as f:
-#         lines = f.readlines()  # read all the lines in the file
-#         tweets = [json.loads(line) for line in lines]  # load them as Python dict
-#         tweets_list = [tweet['text'] for tweet in tweets]
-#         return tweets_list
-#
-#
-# path = '/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/'
-# iphone_file = 'iphone_stream_testdata_collection.json'
-# BeAVoter_file = 'BeAVoter.json'
-# MidtermElections_file = 'MidtermElections2018.json'
-#
-# iphone_list = read_and_cleaning(path, iphone_file)
-#
-# for i in iphone_list:
-#     print i + '\n'
-#     print '------------------------'
-
-
-
-# a model that with noisy labels as initial labels, and can get evolved when user add some customized topics into it
-# compare different model's performance and accuracy
-# --- for each model, how's the accuracy when adding more data into the model and how's the increase of time
-# find a performance (time) and accuracy rate
-# use new data with emojis to replace old data periodically; and based on the rate, use the new topic related data to replace the old data
-
-#---- start with using SemEval2017-task4-test-dataset ----#
-url = '/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/SemEval2017-task4-test-dataset.txt'
-tweets = []
-labels = []
-with open(url, 'r') as f:
-    lines = f.readlines()  # read all the lines in the file
-    for line in lines:
-        line_list = line.split('\t')
-        tweets.append(line_list[2])
-        labels.append(line_list[1])
+def read_and_cleaning_via_df(folder_path,filename):
+    url = folder_path +  filename
+    df = pd.read_csv(url, names=['tweets', 'labels'])
+    posi_tweets = df[df['labels']==0]['tweets'].tolist()
+    nega_tweets = df[df['labels']==1]['tweets'].tolist()
+    return posi_tweets, nega_tweets
 
 def get_only_posi_nega_tweets_and_lables(tweets, labels):
     posi_index = [i for i, x in enumerate(labels) if x == "positive"]
     nega_index = [i for i, x in enumerate(labels) if x == "negative"]
-    # posi_labels = [labels[i] for i in posi_index]
-    # nega_labels = [labels[i] for i in nega_index]
     posi_tweets = [tweets[i] for i in posi_index]
     nega_tweets = [tweets[i] for i in nega_index]
-
     return posi_tweets, nega_tweets
 
+def save_to_file(data_to_save, save_path):
+    with open(save_path,'w') as f:
+        for item in data_to_save:
+            f.write("%s\n" % item)
 
-posi_tweets, nega_tweets = get_only_posi_nega_tweets_and_lables(tweets, labels)
-posi_tweets = preprocessing.processing_pipeline(posi_tweets)
-nega_tweets = preprocessing.processing_pipeline(nega_tweets)
+#
+# # --- start with using SemEval2017-task4-test-dataset --- #
+# url = '/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/'
+# filename = 'SemEval2017-task4-test-dataset.txt'
+# tweets, labels = read_and_cleaning(url, file)
+#
+# # --- get only posi and nega tweets and labels --- #
+# posi_tweets, nega_tweets = get_only_posi_nega_tweets_and_lables(tweets, labels)
 
-print posi_tweets[:10]
-print nega_tweets[:10]
-print len(posi_tweets)
-print len(nega_tweets)
+# # --- preprocessing --- #
+# posi_tweets = preprocessing(posi_tweets).main()
+# nega_tweets = preprocessing(nega_tweets).main()
+#
+# # --- save the result to file --- #
+# save_to_file(posi_tweets, '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/test_dataset/positive_test_tweets_after_preprocessing.txt')
+# save_to_file(nega_tweets, '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/test_dataset/negative_test_tweets_after_preprocessing.txt')
 
 
-##save the result to file
-with open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/positive_test_tweets.txt', 'w') as f:
-    for item in posi_tweets:
-        f.write("%s\n" % item)
+# --- start with yelp reviews --- #
+url = '/Users/yibingyang/Documents/thesis_project_new/Data/E-Commerce/raw_data/'
+filename = 'yelp-reviews.csv'
+posi_tweets, nega_tweets = read_and_cleaning_via_df(url, filename)
 
-with open('/Users/yibingyang/Documents/final_thesis_project/Data/Twitter/test_dataset/negative_test_tweets.txt', 'w') as f:
-    for item in nega_tweets:
-        f.write("%s\n" % item)
+# --- preprocessing --- #
+posi_tweets = preprocessing(posi_tweets).main()
+nega_tweets = preprocessing(nega_tweets).main()
+
+# --- save the result to file --- #
+save_to_file(posi_tweets, '/Users/yibingyang/Documents/thesis_project_new/Data/E-Commerce/after_preprocessing/yelp_posi_after_preprocessing.txt')
+save_to_file(nega_tweets, '/Users/yibingyang/Documents/thesis_project_new/Data/E-Commerce/after_preprocessing/yelp_nega_after_preprocessing.txt')
 

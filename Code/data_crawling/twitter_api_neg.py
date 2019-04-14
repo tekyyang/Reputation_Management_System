@@ -70,7 +70,7 @@ class MyListener(StreamListener):
         json = json.dumps(tweet_dict) + '\n'
         # test path /Users/yibingyang/Documents/thesis_project_new/Data/Twitter/raw_data/test_negative_test.json
         # real path /Users/yibingyang/Documents/thesis_project_new/Data/Twitter/raw_data/negative_test.json
-        f = open('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/raw_data/test_negative_test.json',"a+")
+        f = open('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/raw_data/negative_0407.json',"a+")
         f.write(json)
         f.close()
 
