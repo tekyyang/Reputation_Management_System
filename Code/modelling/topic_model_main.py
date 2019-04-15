@@ -14,6 +14,12 @@ from sklearn.metrics import silhouette_samples, silhouette_score
 from sklearn import svm, linear_model, naive_bayes, ensemble
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
+from nltk.stem import PorterStemmer
+from nltk.stem import WordNetLemmatizer
+from nltk import pos_tag
+
+from referring_list import negation_list
+
 import time
 from matplotlib import pyplot as plt
 import itertools
@@ -155,151 +161,48 @@ class topic_model_builder():
         print 'After resampling, now there are '+str(len(training_posi_resampled_token_list))+ ' positive tweets and '+str(len(training_nega_resampled_token_list))+' negative tweets!\n'
         return training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time
 
-    def bigram_or_unigram_extactor(self, posi_training_token_list, nega_training_token_list, bigram_min_count=20, threshold=10.0, mode='uni_and_bigram'):
-        '''
-        :param  posi_training_token_list,
-                nega_training_token_list,
-                bigram_min_count: Ignore all words and bigrams with total collected count lower than this value,
-                threshold : Represent a score threshold for forming the phrases (higher means fewer phrases);
-                            A phrase of words `a` followed by `b` is accepted if the score of the phrase is greater than threshold;
-                            Heavily depends on concrete scoring-function, see the `scoring` parameter.
-        :return: posi_unigran_bigram_training_token_list, posi_unigran_bigram_training_token_list (mode='uni_and_bigram');
-                 or posi_training_token_list, nega_training_token_list (mode='unigram')
-        '''
-        startTime = time.time()
-        training_list = posi_training_token_list + nega_training_token_list
+   # --- topic model build start --- #
 
-        #unigram does't need to be processed
+    def prepare_data_for_topic_modelling(self, posi_training_token_list, nega_training_token_list, filter_top_ratio = 0.02, min_appear_count = 10):
 
-        #bigram extraction starts
-        bigram = Phrases(training_list, min_count=bigram_min_count, threshold=threshold) # training list should be token list
+        training_token_list = posi_training_token_list + nega_training_token_list
+        traning_tokens = [word for tweet in training_token_list for word in tweet]
 
-        # if a bigram is captured, the original unigram will not be returned.
-        # E.g. ['the','states'] --> ['the_states']
-        # NOT ['the','states'] -/-> ['the','states','the_states']
-        posi_bigram_training_token_list_with_unigram = [bigram[sent] for sent in posi_training_token_list]
-        nega_bigram_training_token_list_with_unigram = [bigram[sent] for sent in nega_training_token_list]
+        from collections import Counter
+        count_all = Counter()
+        count_all.update(traning_tokens)
 
-        # picking only the bigrams ['the_states']
-        posi_bigram_training_token_list = []
-        for token_list in posi_bigram_training_token_list_with_unigram:
-            bigram_token_list = []
-            for token in token_list:
-                if '_' in token:
-                    bigram_token_list.append(token)
-            posi_bigram_training_token_list.append(bigram_token_list)
+        # top words that need to be dropped
+        top_n_filter = int(len(count_all) * filter_top_ratio)
+        top_n_filter_list = count_all.most_common(top_n_filter)
+        top_n_filter_list = [i[0] for i in top_n_filter_list]
 
-        nega_bigram_training_token_list = []
-        for token_list in nega_bigram_training_token_list_with_unigram:
-            bigram_token_list = []
-            for token in token_list:
-                if '_' in token:
-                    bigram_token_list.append(token)
-            nega_bigram_training_token_list.append(bigram_token_list)
+        # at least appear n times
+        words_after_minimum_appear = [i[0] for i in count_all.items() if i[1] >= min_appear_count]
 
-        # combine unigram and bigram
-        # we get ['the','states','the_states'] from this
-        posi_unigran_bigram_training_token_list = []
-        for i in range(len(posi_bigram_training_token_list)):
-            posi_unigran_bigram_training_token_list.append(posi_training_token_list[i]+posi_bigram_training_token_list[i])
+        # get rid of set 1 from set 2
+        final_list = []
+        for i in words_after_minimum_appear:
+            if i not in top_n_filter_list:
+                final_list.append(i)
+            else:
+                continue
 
-        nega_unigran_bigram_training_token_list = []
-        for i in range(len(nega_bigram_training_token_list)):
-            nega_unigran_bigram_training_token_list.append(nega_training_token_list[i] + nega_bigram_training_token_list[i])
+        # keep only the words appear in the final list
+        processed_training_token_list = []
+        for tweet in training_token_list:
+            processed_tweet = []
+            for word in tweet:
+                if word in final_list:
+                    processed_tweet.append(word)
+                else:
+                    continue
+            if len(processed_tweet)<>0:
+                processed_training_token_list.append(processed_tweet)
+            else:
+                continue
 
-        print '=== (2) Finish bigram extraction! Mode is: '+ mode + '. Taking ' + str(round((time.time() - startTime),4)) + 's ===\n'
-
-        feature_extraction_processing_time = round((time.time() - startTime), 4)
-
-        if mode == 'uni_and_bigram':
-            return posi_unigran_bigram_training_token_list, nega_unigran_bigram_training_token_list, feature_extraction_processing_time
-        elif mode =='unigram':
-            return posi_training_token_list, nega_training_token_list, feature_extraction_processing_time
-        else:
-            print 'there is no such mode: '+mode+'!'
-
-    def feature_selection(self, posi_training_token_list, nega_training_token_list, feature_represent_mode='tfidf', feature_selection_mode='chi2', top_n_feature=5000 ):
-        '''
-        :returns
-        X_chi_matrix: the weighted matrix after feature selection
-        feature_name_list_after_chi: a list of feature names after feature selection
-        token_list_after_chi2: referred by name. Notice that it doesn't reduce the amount of tweets.
-                               So positive vs negative tweets amounts are still 50:50
-        '''
-        startTime = time.time()
-        posi_training_string_list=self.to_string_list_tool(posi_training_token_list, mode='token_list_to_string_list')
-        nega_training_string_list=self.to_string_list_tool(nega_training_token_list, mode='token_list_to_string_list')
-
-        X_train_string_list = posi_training_string_list + nega_training_string_list
-        Y_train_list = [1] * len(posi_training_string_list) + [0] * len(nega_training_string_list)
-        X_train_df = pd.DataFrame(X_train_string_list, columns=['text'])
-
-        #--- feature representation from tfidf or word count ---#
-        if feature_represent_mode == 'tfidf':
-            # tf-idf vectorizer
-            vectorizer = TfidfVectorizer()
-            X_matrix = vectorizer.fit_transform(X_train_df['text'])
-
-        elif feature_represent_mode == 'word_count':
-            # word count vectorizer
-            vectorizer = CountVectorizer()
-            X_matrix = vectorizer.fit_transform(X_train_df['text'])
-        else:
-            vectorizer = []
-            X_matrix = []
-            print 'Please input the right mode!'
-
-        print '=== (3) Start feature selection! ==='
-        print 'X_matrix.shape is (number of rows, number of columns):'
-        print X_matrix.shape
-        print 'Taking the top ' +str(top_n_feature)+ ' features...'
-
-        #--- feature selection from chi2 or mutual info ---#
-        if feature_selection_mode =='chi2':
-
-            # ch2 selector
-            ch2 = SelectKBest(chi2, k=top_n_feature)
-
-            #get the feature matrix
-            X_chi_matrix = ch2.fit_transform(X_matrix.toarray(), np.asarray(Y_train_list))
-            '''
-            [[0.         0.46979139 0.         0.         0.        ]
-             [0.         0.6876236  0.         0.53864762 0.        ]
-             [0.51184851 0.         0.51184851 0.         0.51184851]
-             [0.         0.46979139 0.         0.         0.        ]]
-            '''
-
-            #get the feature names
-            feature_name_list_after_chi = [vectorizer.get_feature_names()[i] for i in ch2.get_support(indices=True).tolist()]
-
-            def get_token_list_after_feature_selection(X_chi_matrix, feature_name_list_after_chi):
-                columns_names = feature_name_list_after_chi
-                X_chi_matrix = X_chi_matrix
-                conversion_df = pd.DataFrame(X_chi_matrix, columns=columns_names)
-                conversion_df_2 = pd.DataFrame(index=range(conversion_df.shape[0]), columns=columns_names)
-
-                for i in columns_names:
-                    conversion_df_2[i] = np.where(conversion_df[i] > 0, i, None)
-                l = conversion_df_2.values.tolist()
-
-                token_list_after_chi2 = []
-                for sen in l:
-                    new_sen = [x for x in sen if x <> None]
-                    token_list_after_chi2.append(new_sen)
-
-                return token_list_after_chi2
-
-            token_list_after_chi2=get_token_list_after_feature_selection(X_chi_matrix, feature_name_list_after_chi)
-
-            print '=== (3) Finish feature selection! Feature representation mode is'+ feature_represent_mode +'. Feature selection mode is '+feature_selection_mode+'. Taking ' + str(round((time.time() - startTime),4)) + 's ==='
-            feature_selection_processing_time = round((time.time() - startTime),4)
-
-            return X_chi_matrix,feature_name_list_after_chi, token_list_after_chi2, ch2, feature_selection_processing_time
-
-        else:
-            return [],[],[],[], ''
-
-   # --- proposed classifier building start --- #
+        return processed_training_token_list
 
     def build_lda_lsi_model(self, token_list_after_feature_selection, min_topic_num = 3, max_topic_num = 30, model='lda'):
         """
@@ -488,17 +391,293 @@ class topic_model_builder():
 
         return tweet_topic_distribution_with_cluster_df, selected_kmeans_model, number_of_cluster, add_clustering_info_to_df_processing_time
 
+    # --- classifier building start --- #
+
+    def ngram_extactor(self, posi_training_token_list, nega_training_token_list, bigram_min_count=20,
+                                   threshold=10.0, mode='uni_and_bigram'):
+        '''
+        :param  posi_training_token_list,
+                nega_training_token_list,
+                bigram_min_count: Ignore all words and bigrams with total collected count lower than this value,
+                threshold : Represent a score threshold for forming the phrases (higher means fewer phrases);
+                            A phrase of words `a` followed by `b` is accepted if the score of the phrase is greater than threshold;
+                            Heavily depends on concrete scoring-function, see the `scoring` parameter.
+        :return: posi_unigran_bigram_training_token_list, posi_unigran_bigram_training_token_list (mode='uni_and_bigram');
+                 or posi_training_token_list, nega_training_token_list (mode='unigram')
+        '''
+        startTime = time.time()
+        training_list = posi_training_token_list + nega_training_token_list
+
+        # unigram does't need to be processed
+
+        # bigram extraction starts
+        bigram = Phrases(training_list, min_count=bigram_min_count,
+                         threshold=threshold)  # training list should be token list
+
+        # if a bigram is captured, the original unigram will not be returned.
+        # E.g. ['the','states'] --> ['the_states']
+        # NOT ['the','states'] -/-> ['the','states','the_states']
+        posi_bigram_training_token_list_with_unigram = [bigram[sent] for sent in posi_training_token_list]
+        nega_bigram_training_token_list_with_unigram = [bigram[sent] for sent in nega_training_token_list]
+
+        # picking only the bigrams ['the_states']
+        posi_bigram_training_token_list = []
+        for token_list in posi_bigram_training_token_list_with_unigram:
+            bigram_token_list = []
+            for token in token_list:
+                if '_' in token:
+                    bigram_token_list.append(token)
+            posi_bigram_training_token_list.append(bigram_token_list)
+
+        nega_bigram_training_token_list = []
+        for token_list in nega_bigram_training_token_list_with_unigram:
+            bigram_token_list = []
+            for token in token_list:
+                if '_' in token:
+                    bigram_token_list.append(token)
+            nega_bigram_training_token_list.append(bigram_token_list)
+
+        # combine unigram and bigram
+        # we get ['the','states','the_states'] from this
+        posi_unigran_bigram_training_token_list = []
+        for i in range(len(posi_bigram_training_token_list)):
+            posi_unigran_bigram_training_token_list.append(
+                posi_training_token_list[i] + posi_bigram_training_token_list[i])
+
+        nega_unigran_bigram_training_token_list = []
+        for i in range(len(nega_bigram_training_token_list)):
+            nega_unigran_bigram_training_token_list.append(
+                nega_training_token_list[i] + nega_bigram_training_token_list[i])
+
+        print '=== (2) Finish bigram extraction! Mode is: ' + mode + '. Taking ' + str(
+            round((time.time() - startTime), 4)) + 's ===\n'
+
+        feature_extraction_processing_time = round((time.time() - startTime), 4)
+
+        if mode == 'uni_and_bigram':
+            return posi_unigran_bigram_training_token_list, nega_unigran_bigram_training_token_list, feature_extraction_processing_time
+        elif mode == 'unigram':
+            return posi_training_token_list, nega_training_token_list, feature_extraction_processing_time
+        else:
+            print 'there is no such mode: ' + mode + '!'
+
+    def feature_selection(self, posi_training_token_list, nega_training_token_list, feature_represent_mode='tfidf',
+                          feature_selection_mode='chi2', top_n_feature=5000):
+        '''
+        :returns
+        X_chi_matrix: the weighted matrix after feature selection
+        feature_name_list_after_chi: a list of feature names after feature selection
+        token_list_after_chi2: referred by name. Notice that it doesn't reduce the amount of tweets.
+        So positive vs negative tweets amounts are still 50:50
+        '''
+        startTime = time.time()
+        posi_training_string_list = self.to_string_list_tool(posi_training_token_list, mode='token_list_to_string_list')
+        nega_training_string_list = self.to_string_list_tool(nega_training_token_list, mode='token_list_to_string_list')
+
+        X_train_string_list = posi_training_string_list + nega_training_string_list
+        Y_train_list = [1] * len(posi_training_string_list) + [0] * len(nega_training_string_list)
+        X_train_df = pd.DataFrame(X_train_string_list, columns=['text'])
+
+        # --- feature representation from tfidf or word count ---#
+        if feature_represent_mode == 'tfidf':
+            # tf-idf vectorizer
+            vectorizer = TfidfVectorizer()
+            X_matrix = vectorizer.fit_transform(X_train_df['text'])
+
+        elif feature_represent_mode == 'word_count':
+            # word count vectorizer
+            vectorizer = CountVectorizer()
+            X_matrix = vectorizer.fit_transform(X_train_df['text'])
+
+        else:
+            vectorizer = []
+            X_matrix = []
+            print 'Please input the right mode!'
+
+        print '=== (3) Start feature selection! ==='
+        print 'X_matrix.shape is (number of rows, number of columns):'
+        print X_matrix.shape
+        print 'Taking the top ' + str(top_n_feature) + ' features...'
+
+        # --- feature selection from chi2 or mutual info ---#
+        if feature_selection_mode == 'chi2':
+
+            # ch2 selector
+            ch2 = SelectKBest(chi2, k=top_n_feature)
+
+            # get the feature matrix
+            X_chi_matrix = ch2.fit_transform(X_matrix.toarray(), np.asarray(Y_train_list))
+            '''
+            [[0.         0.46979139 0.         0.         0.        ]
+             [0.         0.6876236  0.         0.53864762 0.        ]
+             [0.51184851 0.         0.51184851 0.         0.51184851]
+             [0.         0.46979139 0.         0.         0.        ]]
+            '''
+
+            # get the feature names
+            feature_name_list_after_chi = [vectorizer.get_feature_names()[i] for i in
+                                           ch2.get_support(indices=True).tolist()]
+
+            def get_token_list_after_feature_selection(X_chi_matrix, feature_name_list_after_chi):
+                columns_names = feature_name_list_after_chi
+                X_chi_matrix = X_chi_matrix
+                conversion_df = pd.DataFrame(X_chi_matrix, columns=columns_names)
+                conversion_df_2 = pd.DataFrame(index=range(conversion_df.shape[0]), columns=columns_names)
+
+                for i in columns_names:
+                    conversion_df_2[i] = np.where(conversion_df[i] > 0, i, None)
+                l = conversion_df_2.values.tolist()
+
+                token_list_after_chi2 = []
+                for sen in l:
+                    new_sen = [x for x in sen if x <> None]
+                    token_list_after_chi2.append(new_sen)
+
+                return token_list_after_chi2
+
+            token_list_after_chi2 = get_token_list_after_feature_selection(X_chi_matrix, feature_name_list_after_chi)
+
+            print '=== (3) Finish feature selection! Feature representation mode is' + feature_represent_mode + '. Feature selection mode is ' + feature_selection_mode + '. Taking ' + str(
+                round((time.time() - startTime), 4)) + 's ==='
+            feature_selection_processing_time = round((time.time() - startTime), 4)
+
+            return X_chi_matrix, feature_name_list_after_chi, token_list_after_chi2, ch2, feature_selection_processing_time
+
+        else:
+            return [], [], [], [], ''
+
+    def lexicon_feature_prep(self):
+        path = '/Users/yibingyang/Documents/thesis_project_new/Lexicon/SentiWordNet_3.0_clean.txt'
+        with open(path, 'r') as f:
+            lines = f.readlines()  # read all the lines in
+
+        # separate words apart based on \t
+        lexicon_list = [line.strip().split('\t') for line in lines]
+
+        # make the vertical words cluster horizonal
+        split_list = []
+        for record in lexicon_list:
+            try:
+                if len(record[4].split(' ')) == 1:
+                    split_list.append(record)
+                else:
+                    for j in range(len(record[4].split(' '))):
+                        split_list.append(
+                            [record[0], record[1], record[2], record[3], record[4].split(' ')[j], record[5]])
+            except:
+                continue
+
+        # get rid of the '#'
+        split_list = [[record[0], record[1], record[2], record[3], record[4].split('#')[0], record[5]] for record in
+                      split_list]
+
+        # create dataframe
+        df = pd.DataFrame(split_list, columns=['POS', 'ID', 'PosScore', 'NegScore', 'SynsetTerms', 'Gross'])
+        df[['PosScore', 'NegScore']] = df[['PosScore', 'NegScore']].astype(np.float)
+        df['NeuScore'] = 1 - df['PosScore'] - df['NegScore']
+        # ps = PorterStemmer()
+        # df['StemWord'] = [ps.stem(word) for word in df['SynsetTerms'].tolist()]
+        wl = WordNetLemmatizer()
+        df['LemmWord'] = [wl.lemmatize(word) for word in df['SynsetTerms'].tolist()]
+
+        lexicon_df = df.groupby('LemmWord').agg({'PosScore': 'mean', 'NegScore': 'mean', 'NeuScore': 'mean'})
+
+        return lexicon_df
+
+    def build_all_features(self, posi_unigran_bigram_training_token_list, nega_unigran_bigram_training_token_list, lexicon_df):
+        training_token_list = posi_unigran_bigram_training_token_list + nega_unigran_bigram_training_token_list
+
+        # --- building lexicon features --- #
+        LemmaWords = lexicon_df.index.tolist()
+        score_list = []
+        # tweet level
+        for tweet in training_token_list:
+            temp_list = [0, 0, 0, 0]  # for posi score, nega score, posi count, nega count
+            overall_tweet_length = len(tweet)
+            for word in tweet:
+                if word in LemmaWords:
+                    posi_score = lexicon_df[lexicon_df.index == word]['PosScore'].tolist()[0]
+                    nega_score = lexicon_df[lexicon_df.index == word]['NegScore'].tolist()[0]
+                    temp_list[0] = temp_list[0] + posi_score
+                    temp_list[1] = temp_list[1] + nega_score
+                    temp_list[2] = (temp_list[2] + 1) if posi_score >= 0.3 else (temp_list[2] + 0)
+                    temp_list[3] = (temp_list[3] + 1) if nega_score >= 0.3 else (temp_list[3] + 0)
+                    # print word, posi_score, temp_list[2],temp_list[3], overall_tweet_length
+
+            score_list.append({
+                 # based on score
+                 # --- sum of sentiment score
+                 # --- sum of positive sentiment score
+                 # --- sum of negative sentiment score
+                 # --- the ratio of positive score to negative score
+                 # based on count
+                 # --- the ratio of positive words to all words; (score > 0.5)
+                 # --- the ratio of positive words to all words; (score > 0.5)
+                'sum_senti_score':     temp_list[0] - temp_list[1],
+                'sum_senti_pos_score': temp_list[0],
+                'sum_senti_neg_score': temp_list[1],
+                'pos_neg_score_ratio': temp_list[0] / temp_list[1],
+                'pos_word_ratio': (float(temp_list[2]) / float(overall_tweet_length)) if overall_tweet_length <> 0 else 0,
+                'neg_word_ratio': (float(temp_list[3]) / float(overall_tweet_length)) if overall_tweet_length <> 0 else 0
+            })
+
+        lexicon_feature_df = pd.DataFrame.from_records(score_list)
+
+        # --- building negation feature --- #
+        wl = WordNetLemmatizer()
+        negation_lemma_list = [wl.lemmatize(word) for word in negation_list]
+        negation_count_list = []
+        for tweet in training_token_list:
+            temp_score = 0
+            for word in tweet:
+                if word in negation_lemma_list:
+                    temp_score = temp_score +1
+            negation_count_list.append(temp_score%2) # the number of negaiton is odd or even
+        # negation_count_list
+
+        # --- building POS feature --- #
+        tagged_features_list = []
+        for tweet in training_token_list:
+            tagged_list = pos_tag(tweet)
+            temp_dict = {'noun': 0, 'verb': 0, 'adj': 0, 'adv': 0, 'pronoun': 0, 'other': 0}
+            for word_tuple in tagged_list:
+                word_tag = word_tuple[1]
+                if word_tag in ('NN', 'NNS', 'NNP', 'NNPS'):
+                    temp_dict['noun'] += 1
+                elif word_tag in ('VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ'):
+                    temp_dict['verb'] += 1
+                elif word_tag in ('JJ', 'JJR', 'JJS'):
+                    temp_dict['adj'] += 1
+                elif word_tag in ('RB', 'RBR', 'RBS'):
+                    temp_dict['adv'] += 1
+                elif word_tag in ('PRP', 'PRP$', 'WP', 'WP$'):
+                    temp_dict['pronoun'] += 1
+                else:
+                    temp_dict['other'] += 1
+            tagged_features_list.append(temp_dict)
+
+        pos_feature_df = pd.DataFrame.from_records(tagged_features_list)
+        pos_feature_df['adj_ratio'] = pos_feature_df['adj'] / pos_feature_df['tweet_length']
+        pos_feature_df['adv_ratio'] = pos_feature_df['adv'] / pos_feature_df['tweet_length']
+        pos_feature_df['noun_ratio'] = pos_feature_df['noun'] / pos_feature_df['tweet_length']
+        pos_feature_df['pronoun_ratio'] = pos_feature_df['pronoun'] / pos_feature_df['tweet_length']
+        pos_feature_df['verb_ratio'] = pos_feature_df['verb'] / pos_feature_df['tweet_length']
+        pos_feature_df['other_ratio'] = pos_feature_df['other'] / pos_feature_df['tweet_length']
+        pos_feature_df = pos_feature_df[['adj_ratio', 'adv_ratio', 'noun_ratio', 'pronoun_ratio', 'verb_ratio', 'other_ratio']]
+
+        return
+
     def classifier_building(self, tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection, classifier = 'logistic_regression'):
         # for tweets in each cluster label, build a classifier for it
         # return the classifier
 
         startTime = time.time()
 
+        # ngram
         vectorizer_clf_dict = {}
         for i in range(0, number_of_cluster):
             # index_list is a list of index for a certain cluster
             # Y_list is a list of Y labels for a certain cluster
-
             index_list = tweet_topic_distribution_with_cluster_df[tweet_topic_distribution_with_cluster_df['clustering_labels'] == i].index.tolist()
             Y_list =     tweet_topic_distribution_with_cluster_df.Y[tweet_topic_distribution_with_cluster_df['clustering_labels'] == i].tolist()
 
@@ -804,12 +983,13 @@ class topic_model_builder():
             print final_piece[['tweets','label','y_pred','logistic_regression','naive_bayes','cluster_label']]
 
     def main(self,
-             feature_extraction_mode = 'uni_and_bigram', bigram_min_count=20,
-             feature_represent_mode='tfidf', feature_selection_mode='chi2', top_n_feature=20000,
+
              lda_min_topic_num=3, lda_max_topic_num=30,
              lsi_min_topic_num=3, lsi_max_topic_num=30,
              min_cluster_number=2, max_cluster_number=30,
              number_of_cluster=6,
+             feature_extraction_mode = 'uni_and_bigram', bigram_min_count=10,
+             feature_represent_mode='tfidf',feature_selection_mode='chi2', top_n_feature=20000,
              classifier = 'naive_bayes',
              show_sample_tweets_head=15):
 
@@ -817,13 +997,12 @@ class topic_model_builder():
 
         # ------ data preparation ------ #
         training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time = self.data_resampling(self.posi_training_data_df,self.nega_training_data_df)
-        posi_bigram_training_token_list, nega_bigram_training_token_list, feature_extraction_processing_time = self.bigram_or_unigram_extactor(training_posi_resampled_token_list, training_nega_resampled_token_list, mode=feature_extraction_mode, bigram_min_count=bigram_min_count)
-        X_chi_matrix,feature_name_list_after_feature_selection, token_list_after_feature_selection, ch2, feature_selection_processing_time = self.feature_selection(posi_bigram_training_token_list, nega_bigram_training_token_list, feature_represent_mode=feature_represent_mode, feature_selection_mode=feature_selection_mode, top_n_feature=top_n_feature)
 
         # ------ build the three topic models: lda, lsi, hdp ------ #
-        top_lda_model, top_lda_model_topics, lda_highest_coherence_score, dictionary_lda, corpus_lda, lda_processing_time = self.build_lda_lsi_model(token_list_after_feature_selection, min_topic_num=lda_min_topic_num, max_topic_num=lda_max_topic_num, model='lda')
-        top_lsi_model, top_lsi_model_topics, lsi_highest_coherence_score, dictionary_lsi, corpus_lsi, lsi_processing_time = self.build_lda_lsi_model(token_list_after_feature_selection, min_topic_num=lsi_min_topic_num, max_topic_num=lsi_max_topic_num, model='lsi')
-        hdp_model,     hdp_topics,           hdp_coherence_score,         dictionary_hdp, corpus_hdp, hdp_processing_time = self.build_the_hdp_model(token_list_after_feature_selection)
+        training_token_list = self.prepare_data_for_topic_modelling(training_posi_resampled_token_list, training_nega_resampled_token_list)
+        top_lda_model, top_lda_model_topics, lda_highest_coherence_score, dictionary_lda, corpus_lda, lda_processing_time = self.build_lda_lsi_model(training_token_list, min_topic_num=lda_min_topic_num, max_topic_num=lda_max_topic_num, model='lda')
+        top_lsi_model, top_lsi_model_topics, lsi_highest_coherence_score, dictionary_lsi, corpus_lsi, lsi_processing_time = self.build_lda_lsi_model(training_token_list, min_topic_num=lsi_min_topic_num, max_topic_num=lsi_max_topic_num, model='lsi')
+        hdp_model,     hdp_topics,           hdp_coherence_score,         dictionary_hdp, corpus_hdp, hdp_processing_time = self.build_the_hdp_model(training_token_list)
 
         self.evaluate_bar_graph([lda_highest_coherence_score, lsi_highest_coherence_score, hdp_coherence_score], ['LDA', 'LSI', 'HDP'])
 
@@ -838,6 +1017,11 @@ class topic_model_builder():
         tweet_topic_distribution_with_cluster_df, selected_kmeans_model, number_of_cluster, add_clustering_info_to_df_processing_time = self.add_clustering_info_to_df(tweet_topic_distribution_df, list_k, lable_list, model_list, number_of_cluster=number_of_cluster)
 
         # ------ classification ------ #
+        # ngram feature
+        posi_bigram_training_token_list, nega_bigram_training_token_list, feature_extraction_processing_time = self.ngram_extactor(training_posi_resampled_token_list, training_nega_resampled_token_list, mode=feature_extraction_mode, bigram_min_count=bigram_min_count)
+        X_chi_matrix,feature_name_list_after_feature_selection, token_list_after_feature_selection, ch2, feature_selection_processing_time = self.feature_selection(posi_bigram_training_token_list, nega_bigram_training_token_list, feature_represent_mode=feature_represent_mode, feature_selection_mode=feature_selection_mode, top_n_feature=top_n_feature)
+        # lexicon feature
+
         vectorizer_clf_dict, classifier_building_processing_time = self.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection, classifier = classifier)
         restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time = self.test_data_fit_in_model(vectorizer_clf_dict, best_topic_model, dictionary, selected_kmeans_model)
         self.evaluation(restructured_X_test_df)
@@ -872,8 +1056,8 @@ class topic_model_builder():
 
 
 trail = topic_model_builder(
-    training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_tweets_after_preprocessing_0407.txt',
-    training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_tweets_after_preprocessing_0407.txt',
+    training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_tweets_after_preprocessing_lemma_0407.txt',
+    training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_tweets_after_preprocessing_lemma_0407.txt',
     # test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/positive_test_tweets_after_preprocessing.txt',
     # test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/negative_test_tweets_after_preprocessing.txt',
     test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/E-Commerce/after_preprocessing/yelp_posi_after_preprocessing.txt',

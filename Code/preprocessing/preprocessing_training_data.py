@@ -288,7 +288,7 @@ class preprocessing():
         text_list = self.remove_punc_and_symbols(text_list)
         text_list = self.tokenize_and_stop_word_filter(text_list)
         text_list = self.compressed_repetitive_words(text_list)
-        text_list = self.stemming(text_list)
+        text_list = self.lemmatizing(text_list)
         text_list = self.turn_all_to_string(text_list)
         text_list = self.drop_duplicates(text_list)
         if 'pos' in self.text_list:
@@ -328,7 +328,7 @@ print 'After preprocessing, positive tweets is '+str(len(posi_text_list))+ ' and
 
 #-----save the result to file-----#
 save_path = '/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/'
-save_filename_posi = 'positive_tweets_after_preprocessing_0407.txt'
-save_filename_nega = 'negative_tweets_after_preprocessing_0407.txt'
+save_filename_posi = 'positive_tweets_after_preprocessing_lemma_0407.txt'
+save_filename_nega = 'negative_tweets_after_preprocessing_lemma_0407.txt'
 save_to_file(save_path,save_filename_posi, posi_text_list).main()
 save_to_file(save_path,save_filename_nega, nega_text_list).main()
