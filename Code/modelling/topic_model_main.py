@@ -18,8 +18,6 @@ from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
 from nltk import pos_tag
 
-from referring_list import negation_list
-
 import time
 from matplotlib import pyplot as plt
 import itertools
@@ -514,34 +512,11 @@ class topic_model_builder():
              [0.         0.46979139 0.         0.         0.        ]]
             '''
 
-            # get the feature names
-            feature_name_list_after_chi = [vectorizer.get_feature_names()[i] for i in
-                                           ch2.get_support(indices=True).tolist()]
-
-            def get_token_list_after_feature_selection(X_chi_matrix, feature_name_list_after_chi):
-                columns_names = feature_name_list_after_chi
-                X_chi_matrix = X_chi_matrix
-                conversion_df = pd.DataFrame(X_chi_matrix, columns=columns_names)
-                conversion_df_2 = pd.DataFrame(index=range(conversion_df.shape[0]), columns=columns_names)
-
-                for i in columns_names:
-                    conversion_df_2[i] = np.where(conversion_df[i] > 0, i, None)
-                l = conversion_df_2.values.tolist()
-
-                token_list_after_chi2 = []
-                for sen in l:
-                    new_sen = [x for x in sen if x <> None]
-                    token_list_after_chi2.append(new_sen)
-
-                return token_list_after_chi2
-
-            token_list_after_chi2 = get_token_list_after_feature_selection(X_chi_matrix, feature_name_list_after_chi)
-
             print '=== (3) Finish feature selection! Feature representation mode is' + feature_represent_mode + '. Feature selection mode is ' + feature_selection_mode + '. Taking ' + str(
                 round((time.time() - startTime), 4)) + 's ==='
             feature_selection_processing_time = round((time.time() - startTime), 4)
 
-            return X_chi_matrix, feature_name_list_after_chi, token_list_after_chi2, ch2, feature_selection_processing_time
+            return X_chi_matrix, vectorizer, ch2, feature_selection_processing_time
 
         else:
             return [], [], [], [], ''
@@ -585,6 +560,7 @@ class topic_model_builder():
         return lexicon_df
 
     def build_all_features(self, posi_unigran_bigram_training_token_list, nega_unigran_bigram_training_token_list, lexicon_df):
+
         training_token_list = posi_unigran_bigram_training_token_list + nega_unigran_bigram_training_token_list
 
         # --- building lexicon features --- #
@@ -624,6 +600,7 @@ class topic_model_builder():
         lexicon_feature_df = pd.DataFrame.from_records(score_list)
 
         # --- building negation feature --- #
+        negation_list = ['no','not','never','nobody','none','neither','nothing','nowhere','barely','rarely','seldom','hardly','scarcely']
         wl = WordNetLemmatizer()
         negation_lemma_list = [wl.lemmatize(word) for word in negation_list]
         negation_count_list = []
@@ -665,35 +642,37 @@ class topic_model_builder():
         pos_feature_df['other_ratio'] = pos_feature_df['other'] / pos_feature_df['tweet_length']
         pos_feature_df = pos_feature_df[['adj_ratio', 'adv_ratio', 'noun_ratio', 'pronoun_ratio', 'verb_ratio', 'other_ratio']]
 
-        return
+        return lexicon_feature_df, negation_count_list, pos_feature_df
 
-    def classifier_building(self, tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection, classifier = 'logistic_regression'):
+    def classifier_building(self, tweet_topic_distribution_with_cluster_df, number_of_cluster,
+                            X_chi_matrix, lexicon_feature_df, negation_count_list, pos_feature_df,
+                            classifier = 'logistic_regression'):
         # for tweets in each cluster label, build a classifier for it
         # return the classifier
 
         startTime = time.time()
+        lexicon_feature_matrix = lexicon_feature_df.values()
+        negation_count_matrix = np.array(negation_count_list)
+        pos_feature_matrix = pos_feature_df.values()
 
-        # ngram
-        vectorizer_clf_dict = {}
+        # --- combine all the features --- #
+        X_train_matrix = np.concatenate((X_chi_matrix, lexicon_feature_matrix.T), axis=1)
+        X_train_matrix = np.concatenate((X_train_matrix, negation_count_matrix.T), axis=1)
+        X_train_matrix = np.concatenate((X_train_matrix, pos_feature_matrix.T), axis=1)
+
+        # --- build classifiers based on clusters --- #
+        clf_dict = {}
         for i in range(0, number_of_cluster):
             # index_list is a list of index for a certain cluster
             # Y_list is a list of Y labels for a certain cluster
             index_list = tweet_topic_distribution_with_cluster_df[tweet_topic_distribution_with_cluster_df['clustering_labels'] == i].index.tolist()
             Y_list =     tweet_topic_distribution_with_cluster_df.Y[tweet_topic_distribution_with_cluster_df['clustering_labels'] == i].tolist()
 
-            #take tweets and labels for each cluster
-            tweets = []
+            #take X_train and Y_train for each cluster
+            X_train_for_selected_cluster = []
             for k in index_list: #index list for a cluster
-                tweets.append(token_list_after_feature_selection[k])
-                # tweets.append([str(k[0]) for k in corpus[k]]) #convert [(257,1), (...)] to [257, ...]. The final tweets look like [['7', '12', '13', '14', '15', ], ['7', '42', '43', '44'], ['7', '81'],...]
-            labels = Y_list
-
-            #text representation
-            vectorizer = TfidfVectorizer()
-            tweet_list = self.to_string_list_tool(tweets, mode='token_list_to_string_list')
-            vectorizer.fit(tweet_list)
-            X_train = vectorizer.transform(tweet_list).toarray()
-            Y_train = labels
+                X_train_for_selected_cluster.append(X_train_matrix[k])
+            Y_train = Y_list
 
             if classifier == 'logistic_regression':
                 clf = linear_model.LogisticRegression()
@@ -701,14 +680,15 @@ class topic_model_builder():
                 clf = naive_bayes.MultinomialNB()
             else:
                 clf = svm.SVC(kernel='linear', gamma='auto')
-            clf.fit(X_train, Y_train)
-            vectorizer_clf_dict.update({i:[vectorizer, clf]})
+
+            clf.fit(X_train_for_selected_cluster, Y_train)
+            clf_dict.update({i: clf})
 
         print '=== (7) Finish classifier building! Taking ' + str(round((time.time() - startTime), 4)) + 's ===\n'
 
         classifier_building_processing_time = round((time.time() - startTime), 4)
 
-        return vectorizer_clf_dict, classifier_building_processing_time
+        return clf_dict, classifier_building_processing_time
 
     def test_data_fit_in_model(self, vectorizer_clf_dict, best_topic_model, dictionary, selected_kmeans_model):
 
@@ -1019,10 +999,17 @@ class topic_model_builder():
         # ------ classification ------ #
         # ngram feature
         posi_bigram_training_token_list, nega_bigram_training_token_list, feature_extraction_processing_time = self.ngram_extactor(training_posi_resampled_token_list, training_nega_resampled_token_list, mode=feature_extraction_mode, bigram_min_count=bigram_min_count)
-        X_chi_matrix,feature_name_list_after_feature_selection, token_list_after_feature_selection, ch2, feature_selection_processing_time = self.feature_selection(posi_bigram_training_token_list, nega_bigram_training_token_list, feature_represent_mode=feature_represent_mode, feature_selection_mode=feature_selection_mode, top_n_feature=top_n_feature)
-        # lexicon feature
+        X_chi_matrix, vectorizer, ch2, feature_selection_processing_time = self.feature_selection(posi_bigram_training_token_list, nega_bigram_training_token_list, feature_represent_mode=feature_represent_mode, feature_selection_mode=feature_selection_mode, top_n_feature=top_n_feature)
+        lexicon_df = self.lexicon_feature_prep
+        lexicon_feature_df, negation_count_list, pos_feature_df = self.build_all_features(posi_bigram_training_token_list, nega_bigram_training_token_list, lexicon_df)
 
-        vectorizer_clf_dict, classifier_building_processing_time = self.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster, token_list_after_feature_selection, classifier = classifier)
+
+
+        vectorizer_clf_dict, classifier_building_processing_time = self.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster,
+                                                                                            X_chi_matrix, lexicon_feature_df, negation_count_list, pos_feature_df,
+                                                                                            classifier = classifier)
+
+        # ---------- here ----------#
         restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time = self.test_data_fit_in_model(vectorizer_clf_dict, best_topic_model, dictionary, selected_kmeans_model)
         self.evaluation(restructured_X_test_df)
 
