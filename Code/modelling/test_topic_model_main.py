@@ -59,24 +59,29 @@ def test_data_resampling():
         test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_test_tweets_after_preprocessing.txt',
         test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_test_tweets_after_preprocessing.txt')
 
-    test_posi_df = DataFrame(data={'tweets': ['This is tweet one', 'This is tweet two'],
-                                             'others': [1, 2]})
-
-    test_nega_df = DataFrame(data={'tweets': ['This is tweet one', 'This is tweet two', 'This is tweet three'],
-                                             'others': [1, 2, 3]})
-
-    training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time = test_instance.data_resampling(test_posi_df, test_nega_df, mode = 'r_under_s')
+    training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time = test_instance.data_resampling(mode = 'r_under_s')
 
     assert isinstance(training_posi_resampled_token_list, list)
     assert isinstance(training_nega_resampled_token_list, list)
+    assert len(training_posi_resampled_token_list) == len(training_nega_resampled_token_list)
 
-    assert len(training_posi_resampled_token_list) == 2
-    assert len(training_nega_resampled_token_list) == 2
+    training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time = test_instance.data_resampling(mode = 'r_upper_s')
+    assert len(training_posi_resampled_token_list) == len(training_nega_resampled_token_list)
 
-    training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time = test_instance.data_resampling(test_posi_df, test_nega_df, mode = 'r_upper_s')
 
-    assert len(training_posi_resampled_token_list) == 3
-    assert len(training_nega_resampled_token_list) == 3
+def test_prepare_data_for_topic_modelling():
+    test_instance = topic_model_builder(
+        training_dataset_posi_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_tweets_after_preprocessing.txt',
+        training_dataset_nega_paths='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_tweets_after_preprocessing.txt',
+        test_dataset_posi_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_positive_test_tweets_after_preprocessing.txt',
+        test_dataset_nega_path='/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/after_preprocessing/test_negative_test_tweets_after_preprocessing.txt')
+
+
+    training_posi_resampled_token_list, training_nega_resampled_token_list, resampling_processing_time = test_instance.data_resampling(test_instance.posi_training_data_df, test_instance.nega_training_data_df)
+    training_token_list = test_instance.prepare_data_for_topic_modelling(training_posi_resampled_token_list, training_nega_resampled_token_list)
+
+    assert len(training_token_list) == len(training_posi_resampled_token_list) + len(training_nega_resampled_token_list)
+    assert all(len(training_token_list[i]) <= len((training_posi_resampled_token_list+training_nega_resampled_token_list)[i]) for i in range(len(training_token_list)))
 
 
 def test_bigram_or_unigram_extactor():
