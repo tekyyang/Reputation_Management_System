@@ -127,6 +127,24 @@ cList = {
   "you've": "you have"
 }
 
+
+negation_list = [
+  'no',
+  'not',
+  'never',
+  'nobody',
+  'none',
+  'neither',
+  'nothing',
+  'nowhere',
+  'barely',
+  'rarely',
+  'seldom',
+  'hardly',
+  'scarcely',
+]
+
+
 emoticons_str = r"""
     (?:
         [:=;] # Eyes
