@@ -611,9 +611,9 @@ class topic_model_builder():
 
     def feature_combination(self, X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df):
 
-        lexicon_feature_matrix = lexicon_feature_df.values
-        negation_count_matrix = negation_feature_df.values
-        pos_feature_matrix = pos_feature_df.values
+        lexicon_feature_matrix = lexicon_feature_df[['sum_senti_score', 'sum_senti_pos_score', 'sum_senti_neg_score', 'pos_neg_score_ratio', 'pos_word_ratio','neg_word_ratio']].values
+        negation_count_matrix = negation_feature_df[['negation_count']].values
+        pos_feature_matrix = pos_feature_df[['adj_ratio', 'adv_ratio', 'noun_ratio', 'pronoun_ratio', 'verb_ratio', 'other_ratio']].values
 
         # --- combine all the features --- #
         X_train_matrix = np.concatenate((X_chi_matrix, lexicon_feature_matrix), axis=1)
@@ -658,7 +658,7 @@ class topic_model_builder():
 
         return clf_dict, classifier_building_processing_time
 
-    def test_data_fit_in_model(self, clf_dict, vectorizer, ch2, best_topic_model, dictionary, selected_kmeans_model):
+    def test_data_fit_in_model(self, clf_dict, vectorizer, ch2, best_topic_model, dictionary, selected_kmeans_model, feature_mode):
 
         startTime = time.time()
         # add tracking number for test data
@@ -713,22 +713,36 @@ class topic_model_builder():
         X_test_df = pd.concat([X_test_posi_df, X_test_nega_df]).reset_index()
         X_test_df['cluster_label'] = cluster_label_list
 
+        if feature_mode == 'all_features':
+            lexicon_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_lexicon_features.csv',sep='\t')
+            negation_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_negation_features.csv',sep='\t')
+            pos_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_pos_features.csv',sep='\t')
+            X_test_df = X_test_df.join(lexicon_feature_df,lsuffix='_left', rsuffix='_right').join(negation_feature_df,lsuffix='_left', rsuffix='_right').join(pos_feature_df,lsuffix='_left', rsuffix='_right')
+
         restructured_X_test_df = None
         # apply the certian classifier on the test tweet
         for i in set(cluster_label_list):
             for j in clf_dict.keys():
                 if i == j:
-
                     # select the corresponding vectorizer and clf
                     # vectorizer = vectorizer_clf_dict[j][0]  # vectorizer
                     clf = clf_dict[j]# clf
 
                     selected_cluster_piece_df = X_test_df[X_test_df['cluster_label'] == i]
+                    lexicon_feature_matrix = selected_cluster_piece_df[['sum_senti_score', 'sum_senti_pos_score', 'sum_senti_neg_score', 'pos_neg_score_ratio', 'pos_word_ratio', 'neg_word_ratio']].values
+                    negation_count_matrix = selected_cluster_piece_df[['negation_count']].values
+                    pos_feature_matrix = selected_cluster_piece_df[['adj_ratio', 'adv_ratio', 'noun_ratio', 'pronoun_ratio', 'verb_ratio', 'other_ratio']].values
                     selected_cluster_X_test = selected_cluster_piece_df['tweets'].tolist()
 
-                    X_test = vectorizer.transform(selected_cluster_X_test).toarray()
-                    X_test = ch2.transform(X_test)
-                    y_pred = clf.predict(X_test)
+                    X_test_ngram = vectorizer.transform(selected_cluster_X_test).toarray()
+                    X_test_matrix = ch2.transform(X_test_ngram)
+
+                    if feature_mode == 'all_features':
+                        X_test_matrix = np.concatenate((X_test_matrix, lexicon_feature_matrix), axis=1)
+                        X_test_matrix = np.concatenate((X_test_matrix, negation_count_matrix), axis=1)
+                        X_test_matrix = np.concatenate((X_test_matrix, pos_feature_matrix), axis=1)
+
+                    y_pred = clf.predict(X_test_matrix)
                     selected_cluster_piece_df['y_pred'] = y_pred
                     restructured_X_test_df = pd.concat([restructured_X_test_df,selected_cluster_piece_df]) if restructured_X_test_df is not None else selected_cluster_piece_df
                     print 'finish cluster ' + str(i)
@@ -928,9 +942,9 @@ class topic_model_builder():
              resampling_mode='r_under_s',
              feature_extraction_mode = 'uni_and_bigram', bigram_min_count=10,
              feature_represent_mode='tfidf',feature_selection_mode='chi2', top_n_feature=5000,
-             classifier = 'naive_bayes',
+             classifier = 'logistic_regression',
              show_sample_tweets_head=15,
-             feature_mode = 'ngram_only'):
+             feature_mode = 'all_features'):
 
         startTime = time.time()
 
@@ -962,6 +976,7 @@ class topic_model_builder():
             negation_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/negation_features.csv',sep='\t')
             pos_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/pos_features.csv', sep='\t')
             X_train = self.feature_combination(X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df)
+            X_train = np.nan_to_num(X_train)
         else:
             print 'please input the right mode!'
             # lexicon_df = self.lexicon_feature_prep()
@@ -971,8 +986,8 @@ class topic_model_builder():
 
         clf_dict, classifier_building_processing_time = self.classifier_building(tweet_topic_distribution_with_cluster_df, number_of_cluster, X_train, classifier = classifier)
 
-        # ---------- here ----------#
-        restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time = self.test_data_fit_in_model(clf_dict, vectorizer, ch2, best_topic_model, dictionary, selected_kmeans_model)
+        # ---------- test data ----------#
+        restructured_X_test_df, cluster_label_list, test_data_fit_in_processing_time = self.test_data_fit_in_model(clf_dict, vectorizer, ch2, best_topic_model, dictionary, selected_kmeans_model, feature_mode)
         self.evaluation(restructured_X_test_df)
 
         # ------ baseline clf ------ #
