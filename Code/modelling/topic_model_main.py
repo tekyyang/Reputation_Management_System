@@ -609,16 +609,25 @@ class topic_model_builder():
             #write something like readline from file
             return [],[],[]
 
-    def feature_combination(self, X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df):
+    def feature_combination(self, X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df, mode):
 
         lexicon_feature_matrix = lexicon_feature_df[['sum_senti_score', 'sum_senti_pos_score', 'sum_senti_neg_score', 'pos_neg_score_ratio', 'pos_word_ratio','neg_word_ratio']].values
         negation_count_matrix = negation_feature_df[['negation_count']].values
         pos_feature_matrix = pos_feature_df[['adj_ratio', 'adv_ratio', 'noun_ratio', 'pronoun_ratio', 'verb_ratio', 'other_ratio']].values
 
-        # --- combine all the features --- #
-        X_train_matrix = np.concatenate((X_chi_matrix, lexicon_feature_matrix), axis=1)
-        X_train_matrix = np.concatenate((X_train_matrix, negation_count_matrix), axis=1)
-        X_train_matrix = np.concatenate((X_train_matrix, pos_feature_matrix), axis=1)
+        if mode == 'ngram_and_negation':
+            X_train_matrix = np.concatenate((X_chi_matrix, negation_count_matrix), axis=1)
+        elif mode == 'ngram_and_pos':
+            X_train_matrix = np.concatenate((X_chi_matrix, pos_feature_matrix), axis=1)
+        elif mode == 'ngram_and_lexicon':
+            X_train_matrix = np.concatenate((X_chi_matrix, lexicon_feature_matrix), axis=1)
+        elif mode == 'all_features':
+            X_train_matrix = np.concatenate((X_chi_matrix, lexicon_feature_matrix), axis=1)
+            X_train_matrix = np.concatenate((X_train_matrix, negation_count_matrix), axis=1)
+            X_train_matrix = np.concatenate((X_train_matrix, pos_feature_matrix), axis=1)
+        else:
+            print 'not the right mode!'
+            X_train_matrix = []
 
         return X_train_matrix
 
@@ -713,11 +722,22 @@ class topic_model_builder():
         X_test_df = pd.concat([X_test_posi_df, X_test_nega_df]).reset_index()
         X_test_df['cluster_label'] = cluster_label_list
 
-        if feature_mode == 'all_features':
-            lexicon_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_lexicon_features.csv',sep='\t')
-            negation_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_negation_features.csv',sep='\t')
-            pos_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_pos_features.csv',sep='\t')
-            X_test_df = X_test_df.join(lexicon_feature_df,lsuffix='_left', rsuffix='_right').join(negation_feature_df,lsuffix='_left', rsuffix='_right').join(pos_feature_df,lsuffix='_left', rsuffix='_right')
+        # --- test feature metrics --- #
+        lexicon_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_lexicon_features.csv',sep='\t')
+        negation_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_negation_features.csv',sep='\t')
+        pos_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/test_pos_features.csv', sep='\t')
+
+        if feature_mode == 'ngram_and_negation':
+            X_test_df = X_test_df.join(negation_feature_df,lsuffix='_left',rsuffix='_right')
+        elif feature_mode == 'ngram_and_pos':
+            X_test_df = X_test_df.join(pos_feature_df,lsuffix='_left',rsuffix='_right')
+        elif feature_mode == 'ngram_and_lexicon':
+            X_test_df = X_test_df.join(lexicon_feature_df,lsuffix='_left',rsuffix='_right')
+        elif feature_mode == 'all_features':
+           X_test_df = X_test_df.join(lexicon_feature_df,lsuffix='_left', rsuffix='_right').join(negation_feature_df,lsuffix='_left', rsuffix='_right').join(pos_feature_df,lsuffix='_left', rsuffix='_right')
+        else:
+            print 'this is not the supported feature mode for test data!'
+            X_test_df = []
 
         restructured_X_test_df = None
         # apply the certian classifier on the test tweet
@@ -729,15 +749,16 @@ class topic_model_builder():
                     clf = clf_dict[j]# clf
 
                     selected_cluster_piece_df = X_test_df[X_test_df['cluster_label'] == i]
-                    lexicon_feature_matrix = selected_cluster_piece_df[['sum_senti_score', 'sum_senti_pos_score', 'sum_senti_neg_score', 'pos_neg_score_ratio', 'pos_word_ratio', 'neg_word_ratio']].values
-                    negation_count_matrix = selected_cluster_piece_df[['negation_count']].values
-                    pos_feature_matrix = selected_cluster_piece_df[['adj_ratio', 'adv_ratio', 'noun_ratio', 'pronoun_ratio', 'verb_ratio', 'other_ratio']].values
                     selected_cluster_X_test = selected_cluster_piece_df['tweets'].tolist()
 
                     X_test_ngram = vectorizer.transform(selected_cluster_X_test).toarray()
                     X_test_matrix = ch2.transform(X_test_ngram)
 
                     if feature_mode == 'all_features':
+                        lexicon_feature_matrix = selected_cluster_piece_df[['sum_senti_score', 'sum_senti_pos_score', 'sum_senti_neg_score', 'pos_neg_score_ratio', 'pos_word_ratio', 'neg_word_ratio']].values
+                        negation_count_matrix = selected_cluster_piece_df[['negation_count']].values
+                        pos_feature_matrix = selected_cluster_piece_df[['adj_ratio', 'adv_ratio', 'noun_ratio', 'pronoun_ratio', 'verb_ratio', 'other_ratio']].values
+
                         X_test_matrix = np.concatenate((X_test_matrix, lexicon_feature_matrix), axis=1)
                         X_test_matrix = np.concatenate((X_test_matrix, negation_count_matrix), axis=1)
                         X_test_matrix = np.concatenate((X_test_matrix, pos_feature_matrix), axis=1)
@@ -820,7 +841,6 @@ class topic_model_builder():
         # a list of baseline classifiers
         lg_clf = linear_model.LogisticRegression()
         nb_clf = naive_bayes.MultinomialNB()
-        # svm_clf = svm.SVC()
         # rf_clf = ensemble.RandomForestClassifier()
         # b_clf = xgboost.XGBClassifier()
 
@@ -828,7 +848,6 @@ class topic_model_builder():
 
         lg_clf.fit(X_train, Y_train)
         nb_clf.fit(X_train, Y_train)
-        # svm_clf.fit(X_train, Y_train)
         # rf_clf.fit(X_train, Y_train)
         # b_clf.fit(X_train, Y_train)
 
@@ -936,12 +955,12 @@ class topic_model_builder():
 
     def main(self,
              no_below=5, no_above=0.4,
-             lda_min_topic_num=3, lda_max_topic_num=10,
-             lsi_min_topic_num=3, lsi_max_topic_num=10,
-             min_cluster_number=2, max_cluster_number=10, number_of_cluster=6,
-             resampling_mode='r_under_s',
-             feature_extraction_mode = 'uni_and_bigram', bigram_min_count=10,
-             feature_represent_mode='tfidf',feature_selection_mode='chi2', top_n_feature=5000,
+             lda_min_topic_num=3, lda_max_topic_num=30,
+             lsi_min_topic_num=3, lsi_max_topic_num=30,
+             min_cluster_number=2, max_cluster_number=10, number_of_cluster=6, # don't need to revise this line and above
+             resampling_mode='r_upper_s',
+             feature_extraction_mode = 'uni_and_bigram', bigram_min_count=10, #uni_and_bigram; unigram
+             feature_represent_mode='tfidf',feature_selection_mode='chi2', top_n_feature=20000,
              classifier = 'logistic_regression',
              show_sample_tweets_head=15,
              feature_mode = 'all_features'):
@@ -969,13 +988,23 @@ class topic_model_builder():
         posi_bigram_training_token_list, nega_bigram_training_token_list, feature_extraction_processing_time = self.ngram_extactor(training_posi_resampled_token_list, training_nega_resampled_token_list, mode=feature_extraction_mode, bigram_min_count=bigram_min_count)
         X_chi_matrix, vectorizer, ch2, feature_selection_processing_time = self.feature_selection(posi_bigram_training_token_list, nega_bigram_training_token_list, feature_represent_mode=feature_represent_mode, feature_selection_mode=feature_selection_mode, top_n_feature=top_n_feature)
 
-        if feature_mode == 'ngram_only':
+        lexicon_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/lexicon_features.csv', sep='\t')
+        negation_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/negation_features.csv', sep='\t')
+        pos_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/pos_features.csv', sep='\t')
+
+        if feature_mode == 'ngram':
             X_train = X_chi_matrix
+        elif feature_mode == 'ngram_and_negation':
+            X_train = self.feature_combination(X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df, mode=feature_mode)
+            X_train = np.nan_to_num(X_train)
+        elif feature_mode == 'ngram_and_pos':
+            X_train = self.feature_combination(X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df, mode=feature_mode)
+            X_train = np.nan_to_num(X_train)
+        elif feature_mode == 'ngram_and_lexicon':
+            X_train = self.feature_combination(X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df, mode=feature_mode)
+            X_train = np.nan_to_num(X_train)
         elif feature_mode == 'all_features':
-            lexicon_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/lexicon_features.csv',sep='\t')
-            negation_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/negation_features.csv',sep='\t')
-            pos_feature_df = pd.read_csv('/Users/yibingyang/Documents/thesis_project_new/Data/Twitter/intermediate/pos_features.csv', sep='\t')
-            X_train = self.feature_combination(X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df)
+            X_train = self.feature_combination(X_chi_matrix, lexicon_feature_df, negation_feature_df, pos_feature_df, mode=feature_mode)
             X_train = np.nan_to_num(X_train)
         else:
             print 'please input the right mode!'
